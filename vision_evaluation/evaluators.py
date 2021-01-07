@@ -169,11 +169,8 @@ class RecallEvaluator(Evaluator):
         target_mat = _targets_to_mat(targets, predictions.shape[1])
 
         filtered_preds = self.prediction_filter.filter(predictions, 'vec')
-        print(filtered_preds)
         n_correct_predictions = np.multiply(filtered_preds, target_mat).sum(1)  # shape (N,)
-        print(n_correct_predictions)
         n_gt = target_mat.sum(1)  # shape (N,)
-        print(n_gt)
         n_gt[n_gt == 0] = 1  # To avoid zero-division. for sample with zero labels, here we default recall to zero
         self.sample_recall_sum += (n_correct_predictions / n_gt).sum()
         self.num_sample += num_samples
