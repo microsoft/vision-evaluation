@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
-from vision_evaluation.evaluators import AveragePrecisionEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator
+from vision_evaluation.evaluators import AveragePrecisionEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
+    PrecisionEvaluator, RecallEvaluator
+from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
 class TestClassificationEvaluator(unittest.TestCase):
@@ -23,17 +25,17 @@ class TestClassificationEvaluator(unittest.TestCase):
         top5_acc_evaluator = TopKAccuracyEvaluator(5)
         top5_acc_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
 
-        self.assertEqual(top1_acc_evaluator.get_report(average='micro')["top1_accuracy"], 0.4)
-        self.assertEqual(top5_acc_evaluator.get_report(average='micro')["top5_accuracy"], 1.0)
+        self.assertEqual(0.4, top1_acc_evaluator.get_report(average='micro')["accuracy_top1"])
+        self.assertEqual(1.0, top5_acc_evaluator.get_report(average='micro')["accuracy_top5"])
 
-        self.assertEqual(top1_acc_evaluator.get_report(average='macro')["top1_accuracy"], 0.4)
-        self.assertEqual(top5_acc_evaluator.get_report(average='macro')["top5_accuracy"], 1.0)
+        self.assertEqual(0.4, top1_acc_evaluator.get_report(average='macro')["accuracy_top1"])
+        self.assertEqual(1.0, top5_acc_evaluator.get_report(average='macro')["accuracy_top5"])
 
     def test_average_precision_evaluator(self):
         evaluator = AveragePrecisionEvaluator()
         evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        self.assertEqual(evaluator.get_report(average='micro')["average_precision"], 0.4476823176823177)
-        self.assertEqual(evaluator.get_report(average='macro')["average_precision"], 0.47574404761904765)
+        self.assertAlmostEqual(0.447682, evaluator.get_report(average='micro')["average_precision"], places=5)
+        self.assertAlmostEqual(0.475744, evaluator.get_report(average='macro')["average_precision"], places=5)
 
     def test_ece_loss_evaluator(self):
         evaluator = EceLossEvaluator()
@@ -43,11 +45,50 @@ class TestClassificationEvaluator(unittest.TestCase):
     def test_threshold_accuracy_evaluator(self):
         thresh03_evaluator = ThresholdAccuracyEvaluator(0.3)
         thresh03_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        self.assertEqual(0.4, thresh03_evaluator.get_report()["accuracy_0.3"])
+        self.assertEqual(0.4, thresh03_evaluator.get_report()["accuracy_thres=0.3"])
 
         thresh05_evaluator = ThresholdAccuracyEvaluator(0.5)
         thresh05_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        self.assertEqual(0.3, thresh05_evaluator.get_report()["accuracy_0.5"])
+        self.assertEqual(0.35, thresh05_evaluator.get_report()["accuracy_thres=0.5"])
+
+
+class TestMultilabelClassificationEvaluator(unittest.TestCase):
+    TARGETS = np.array([[1, 0, 0],
+                        [0, 1, 1],
+                        [1, 1, 1]])
+    PREDICTIONS = np.array([[1, 0.3, 0],
+                            [0, 1, 0.5],
+                            [0.5, 0.6, 0.5]])
+
+    def test_precision_evaluator(self):
+        thresholds = [0.0, 0.3, 0.6, 0.7]
+        expectations = [0.66666, 0.83333, 1.0, 0.66666]
+        for i in range(len(thresholds)):
+            prec_eval = PrecisionEvaluator(ThresholdPredictionFilter(thresholds[i]))
+            prec_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
+            self.assertAlmostEqual(expectations[i], prec_eval.get_report()[f"precision_thres={thresholds[i]}"], places=4)
+
+        ks = [1, 2, 3]
+        expectations = [1.0, 0.833333, 0.66666]
+        for i in range(len(ks)):
+            prec_eval = PrecisionEvaluator(TopKPredictionFilter(ks[i]))
+            prec_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
+            self.assertAlmostEqual(expectations[i], prec_eval.get_report()[f"precision_top{ks[i]}"], places=4)
+
+    def test_recall_evaluator(self):
+        thresholds = [0.0, 0.3, 0.6, 0.7]
+        expectations = [1.0, 1.0, 0.61111, 0.5]
+        for i in range(len(thresholds)):
+            recall_eval = RecallEvaluator(ThresholdPredictionFilter(thresholds[i]))
+            recall_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
+            self.assertAlmostEqual(expectations[i], recall_eval.get_report()[f"recall_thres={thresholds[i]}"], places=4)
+
+        ks = [0, 1, 2, 3]
+        expectations = [0, 0.61111, 0.88888, 1.0]
+        for i in range(len(ks)):
+            recall_eval = RecallEvaluator(TopKPredictionFilter(ks[i]))
+            recall_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
+            self.assertAlmostEqual(expectations[i], recall_eval.get_report()[f"recall_top{ks[i]}"], places=4)
 
 
 class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
@@ -79,7 +120,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
 
         evaluator.add_predictions(predictions, targets)
         report = evaluator.get_report()
-        self.assertEqual(report["mAP_50"], 0.75)
+        self.assertEqual(0.75, report["mAP_50"])
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_perfect_two_images(self):
@@ -95,7 +136,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
 
         evaluator.add_predictions(predictions, targets)
         report = evaluator.get_report()
-        self.assertEqual(report["mAP_50"], 1.0)
+        self.assertEqual(1.0, report["mAP_50"])
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_two_batches(self):
@@ -121,7 +162,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
 
         evaluator.add_predictions(predictions, targets)
         report = evaluator.get_report()
-        self.assertEqual(report["mAP_50"], 0.75)
+        self.assertEqual(0.75, report["mAP_50"])
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_iou_threshold(self):
@@ -135,7 +176,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
 
         evaluator.add_predictions(predictions, targets)
         report = evaluator.get_report()
-        self.assertEqual(report["mAP_50"], 0.5)
+        self.assertEqual(0.5, report["mAP_50"])
         self.assertTrue(isinstance(report["mAP_50"], float))
 
         evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.2)
@@ -148,7 +189,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
 
         evaluator.add_predictions(predictions, targets)
         report = evaluator.get_report()
-        self.assertEqual(report["mAP_20"], 1.0)
+        self.assertEqual(1.0, report["mAP_20"])
         self.assertTrue(isinstance(report["mAP_20"], float))
 
     def test_no_predictions(self):
@@ -161,7 +202,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
 
         evaluator.add_predictions(predictions, targets)
         report = evaluator.get_report()
-        self.assertEqual(report["mAP_50"], 0.0)
+        self.assertEqual(0.0, report["mAP_50"])
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_no_targets(self):
@@ -175,12 +216,12 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
 
         evaluator.add_predictions(predictions, targets)
         report = evaluator.get_report()
-        self.assertEqual(report["mAP_50"], 0.0)
+        self.assertEqual(0.0, report["mAP_50"])
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_empty_result(self):
         evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5)
         report = evaluator.get_report()
         self.assertIn('mAP_50', report)
-        self.assertEqual(report["mAP_50"], 0.0)
+        self.assertEqual(0.0, report["mAP_50"])
         self.assertTrue(isinstance(report["mAP_50"], float))
