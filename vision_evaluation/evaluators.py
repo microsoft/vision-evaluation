@@ -4,6 +4,7 @@ import sklearn.metrics
 import numpy as np
 from abc import ABC, abstractmethod
 from .prediction_filters import PredictionFilter, TopKPredictionFilter, ThresholdPredictionFilter
+from functools import reduce
 
 
 def _targets_to_mat(targets, n_class):
@@ -430,3 +431,20 @@ class MeanAveragePrecisionEvaluatorForMultipleIOUs(Evaluator):
         for evaluator in self.evaluators:
             evaluator.reset()
         super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).reset()
+
+
+class EvaluatorAggregator(Evaluator):
+    def __init__(self, evaluators):
+        self.evaluators = evaluators
+        super(EvaluatorAggregator, self).__init__()
+
+    def add_predictions(self, predictions, targets):
+        for evaluator in self.evaluators:
+            evaluator.add_predictions(predictions, targets)
+
+    def get_report(self, **kwargs):
+        return reduce(lambda x, y: x.update(y) or x, [evalator.get_report(**kwargs) for evalator in self.evaluators])
+
+    def reset(self):
+        for evaluator in self.evaluators:
+            evaluator.reset()
