@@ -1,13 +1,10 @@
 import collections
 import statistics
-import sklearn.metrics
+import sklearn.metrics as sm
 import numpy as np
-from abc import ABC
-
-
-def _top_k_prediction_indices(prediction, k):
-    top_k_preds = np.argsort(-prediction, axis=1)[:, :k]
-    return top_k_preds
+from abc import ABC, abstractmethod
+from .prediction_filters import PredictionFilter, TopKPredictionFilter, ThresholdPredictionFilter
+from functools import reduce
 
 
 def _targets_to_mat(targets, n_class):
@@ -28,9 +25,11 @@ class Evaluator(ABC):
     def __init__(self):
         self.reset()
 
+    @abstractmethod
     def add_predictions(self, predictions, targets):
         raise NotImplementedError
 
+    @abstractmethod
     def get_report(self, **kwargs):
         raise NotImplementedError
 
@@ -41,46 +40,48 @@ class Evaluator(ABC):
         self.custom_fields = {}
 
 
-class TopKAccuracyEvaluator(Evaluator):
-    def __init__(self, k):
-        self.k = k
-        super(TopKAccuracyEvaluator, self).__init__()
-
-    def reset(self):
-        super(TopKAccuracyEvaluator, self).reset()
-        self.total_num = 0
-        self.topk_correct_num = 0
+class EvaluatorAggregator(Evaluator):
+    def __init__(self, evaluators):
+        self.evaluators = evaluators
+        super(EvaluatorAggregator, self).__init__()
 
     def add_predictions(self, predictions, targets):
-        """ Evaluate a batch of predictions.
-        Args:
-            predictions: the model output numpy array. Shape (N, num_class)
-            targets: the golden truths. Shape (N,)
-        """
-        assert len(predictions) == len(targets)
-        assert len(targets.shape) == 1
-
-        n_sample = len(predictions)
-        n_class = predictions.shape[1]
-
-        k = min(self.k, n_class)
-        top_k_predictions = _top_k_prediction_indices(predictions, k)
-        self.topk_correct_num += len([1 for sample_idx in range(n_sample) if targets[sample_idx] in top_k_predictions[sample_idx]])
-
-        self.total_num += len(predictions)
+        for evaluator in self.evaluators:
+            evaluator.add_predictions(predictions, targets)
 
     def get_report(self, **kwargs):
-        return {f'top{self.k}_accuracy': float(self.topk_correct_num) / self.total_num if self.total_num else 0.0}
+        return reduce(lambda x, y: x.update(y) or x, [evalator.get_report(**kwargs) for evalator in self.evaluators])
 
-
-class AveragePrecisionEvaluator(Evaluator, ABC):
     def reset(self):
-        super(AveragePrecisionEvaluator, self).reset()
+        for evaluator in self.evaluators:
+            evaluator.reset()
+
+
+class MemorizingEverythingEvaluator(Evaluator, ABC):
+    """
+    Base evaluator that memorize all ground truth and predictions
+    """
+
+    def __init__(self, prediction_filter=None):
+        super(MemorizingEverythingEvaluator, self).__init__()
+        self.prediction_filter = prediction_filter
+
+    def reset(self):
+        super(MemorizingEverythingEvaluator, self).reset()
         self.all_targets = np.array([])
         self.all_predictions = np.array([])
 
     def add_predictions(self, predictions, targets):
+        """ Add a batch of predictions for evaluation.
+        Args:
+            predictions: the model output array. Shape (N, num_class)
+            targets: the ground truths. Shape (N, num_class) for multi-label or (N,) for multi-class
+        """
+
+        assert len(predictions) == len(targets)
+
         target_mat = _targets_to_mat(targets, predictions.shape[1])
+        predictions = self.prediction_filter.filter(predictions, 'vec') if self.prediction_filter else predictions
 
         if self.all_predictions.size != 0:
             self.all_predictions = np.append(self.all_predictions, predictions, axis=0)
@@ -92,7 +93,7 @@ class AveragePrecisionEvaluator(Evaluator, ABC):
         else:
             self.all_targets = np.copy(target_mat)
 
-    def calculate_average_precision_score(self, average='macro'):
+    def calculate_score(self, average='macro'):
         """
         average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
         If ``None``, the scores for each class are returned. Otherwise,
@@ -111,21 +112,150 @@ class AveragePrecisionEvaluator(Evaluator, ABC):
             Calculate metrics for each instance, and find their average.
         """
         assert self.all_targets.size == self.all_predictions.size
-        ap = 0.0
+        result = 0.0
         if self.all_targets.size > 0:
             non_empty_idx = np.where(np.invert(np.all(self.all_targets == 0, axis=0)))[0]
             if non_empty_idx.size != 0:
-                ap = sklearn.metrics.average_precision_score(self.all_targets[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
+                result = self._calculate(self.all_targets[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
 
-        return ap
+        return result
+
+    @abstractmethod
+    def _calculate(self, targets, predictions, average):
+        pass
+
+    @abstractmethod
+    def _get_id(self):
+        pass
 
     def get_report(self, **kwargs):
-        return {'average_precision': self.calculate_average_precision_score(kwargs['average'])}
+        average = kwargs['average'] if 'average' in kwargs else 'macro'
+        return {self._get_id(): self.calculate_score(average)}
+
+
+class TopKAccuracyEvaluator(Evaluator):
+    """
+    Top k accuracy evaluator for multiclass classification
+    """
+
+    def __init__(self, k):
+        self.prediction_filter = TopKPredictionFilter(k)
+        super(TopKAccuracyEvaluator, self).__init__()
+
+    def reset(self):
+        super(TopKAccuracyEvaluator, self).reset()
+        self.total_num = 0
+        self.topk_correct_num = 0
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: the model output numpy array. Shape (N, num_class)
+            targets: the golden truths. Shape (N,)
+        """
+        assert len(predictions) == len(targets)
+        assert len(targets.shape) == 1
+
+        n_sample = len(predictions)
+
+        top_k_predictions = self.prediction_filter.filter(predictions, 'indices')
+        self.topk_correct_num += len([1 for sample_idx in range(n_sample) if targets[sample_idx] in top_k_predictions[sample_idx]])
+        self.total_num += n_sample
+
+    def get_report(self, **kwargs):
+        return {f'accuracy_{self.prediction_filter.identifier}': float(self.topk_correct_num) / self.total_num if self.total_num else 0.0}
+
+
+class ThresholdAccuracyEvaluator(Evaluator):
+    """
+    Threshold-based accuracy evaluator for multilabel classification, calculated in a sample-based flavor
+    Note that
+        1. this could be used for multi-class classification, but does not make much sense
+        2. sklearn.metrics.accuracy_score actually is computing exact match ratio for multi-label classification, which is too harsh
+    """
+
+    def __init__(self, threshold):
+        super().__init__()
+        self.prediction_filter = ThresholdPredictionFilter(threshold)
+
+    def add_predictions(self, predictions, targets):
+        """ Add a batch of predictions for evaluation.
+        Args:
+            predictions: the model output array. Shape (N, num_class)
+            targets: the ground truths. Shape (N, num_class) for multi-label (or (N,) for multi-class)
+        """
+
+        assert len(predictions) == len(targets)
+
+        num_samples = len(predictions)
+        target_mat = _targets_to_mat(targets, predictions.shape[1])
+
+        prediction_over_threshold = self.prediction_filter.filter(predictions, 'vec')
+        n_correct_predictions = np.multiply(prediction_over_threshold, target_mat).sum(1)  # shape (N,)
+        n_total = (np.add(prediction_over_threshold, target_mat) >= 1).sum(1)  # shape (N,)
+        n_total[n_total == 0] = 1  # To avoid zero-division. If n_total==0, num should be zero as well.
+        self.sample_accuracy_sum += (n_correct_predictions / n_total).sum()
+        self.num_sample += num_samples
+
+    def get_report(self, **kwargs):
+        return {f'accuracy_{self.prediction_filter.identifier}': float(self.sample_accuracy_sum) / self.num_sample if self.num_sample else 0.0}
+
+    def reset(self):
+        super(ThresholdAccuracyEvaluator, self).reset()
+        self.num_sample = 0
+        self.sample_accuracy_sum = 0
+
+
+class PrecisionEvaluator(MemorizingEverythingEvaluator):
+    """
+    Precision evaluator for both multi-class and multi-label classification
+    """
+
+    def __init__(self, prediction_filter):
+        super().__init__(prediction_filter)
+
+    def _get_id(self):
+        return f'precision_{self.prediction_filter.identifier}'
+
+    def _calculate(self, targets, predictions, average):
+        return sm.precision_score(targets, predictions, average=average)
+
+
+class RecallEvaluator(MemorizingEverythingEvaluator):
+    """
+    Recall evaluator for both multi-class and multi-label classification
+    """
+
+    def __init__(self, prediction_filter):
+        super().__init__(prediction_filter)
+
+    def _get_id(self):
+        return f'recall_{self.prediction_filter.identifier}'
+
+    def _calculate(self, targets, predictions, average):
+        return sm.recall_score(targets, predictions, average=average)
+
+
+class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
+    """
+    Average Precision evaluator for both multi-class and multi-label classification
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def _get_id(self):
+        return 'average_precision'
+
+    def _calculate(self, targets, predictions, average):
+        return sm.average_precision_score(targets, predictions, average=average)
 
 
 class EceLossEvaluator(Evaluator):
     """
     Computes the expected calibration error (ECE) given the model confidence and true labels for a set of data points.
+
+    Works for multi-class classification only.
 
     https://arxiv.org/pdf/1706.04599.pdf
     """
@@ -136,6 +266,7 @@ class EceLossEvaluator(Evaluator):
         bins = np.linspace(0, 1, self.n_bins + 1)
         self.bin_lower_bounds = bins[:-1]
         self.bin_upper_bounds = bins[1:]
+        self.prediction_filter = TopKPredictionFilter(1)
         super(EceLossEvaluator, self).__init__()
 
     def add_predictions(self, predictions, targets):
@@ -145,11 +276,9 @@ class EceLossEvaluator(Evaluator):
             targets: the golden truths. Shape (N,)
         """
 
-        # calibration_ece
-
         self.total_num += len(predictions)
 
-        indices = _top_k_prediction_indices(predictions, 1).flatten()
+        indices = np.array(self.prediction_filter.filter(predictions, 'indices')).flatten()
         confidence = predictions[np.arange(len(predictions)), indices]
         correct = (indices == targets)
         for bin_i in range(self.n_bins):
@@ -166,37 +295,6 @@ class EceLossEvaluator(Evaluator):
         self.total_num = 0
         self.total_correct_in_bin = np.zeros(self.n_bins)
         self.sum_confidence_in_bin = np.zeros(self.n_bins)
-
-
-class ThresholdAccuracyEvaluator(Evaluator):
-    def __init__(self, threshold):
-        super(ThresholdAccuracyEvaluator, self).__init__()
-        self._threshold = threshold
-
-    def add_predictions(self, predictions, targets):
-        """ Evaluate a batch of predictions.
-        Args:
-            predictions: the model output array. Shape (N, num_class)
-            targets: the ground truths. Shape (N, num_class)
-        """
-        assert len(predictions) == len(targets)
-
-        target_mat = _targets_to_mat(targets, predictions.shape[1])
-
-        prediction_over_thres = predictions > self._threshold
-        num = np.multiply(prediction_over_thres, target_mat).sum(1)  # shape (N,)
-        den = (np.add(prediction_over_thres, target_mat) >= 1).sum(1)  # shape (N,)
-        den[den == 0] = 1  # To avoid zero-division. If den==0, num should be zero as well.
-        self.correct_num += (num / den).sum()
-        self.total_num += len(predictions)
-
-    def get_report(self, average='macro'):
-        return {f'accuracy_{self._threshold}': float(self.correct_num) / self.total_num if self.total_num else 0.0}
-
-    def reset(self):
-        super(ThresholdAccuracyEvaluator, self).reset()
-        self.correct_num = 0
-        self.total_num = 0
 
 
 class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
@@ -297,43 +395,28 @@ class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
         if not is_correct or not any(is_correct):
             return 0
         recall = float(np.sum(is_correct)) / true_num
-        return sklearn.metrics.average_precision_score(is_correct, probabilities, average=average) * recall
+        return sm.average_precision_score(is_correct, probabilities, average=average) * recall
 
-    def get_report(self, average='macro'):
-        all_aps = []
+    def get_report(self, **kwargs):
+        average = kwargs['average'] if 'average' in kwargs else 'macro'
         for class_index in self.is_correct:
             ap = MeanAveragePrecisionEvaluatorForSingleIOU._calculate_average_precision(self.is_correct[class_index], self.probabilities[class_index], self.true_num[class_index], average)
-            all_aps.append(ap)
+            self.aps[class_index] = ap
 
-        mean_ap = float(statistics.mean(all_aps)) if all_aps else 0.0
-        return {"mAP_{}".format(int(self.iou * 100)): mean_ap}
+        mean_ap = float(statistics.mean([self.aps[x] for x in self.aps])) if self.aps else 0.0
+        return {f'mAP_{int(self.iou * 100)}': mean_ap}
 
     def reset(self):
         self.is_correct = collections.defaultdict(list)
         self.probabilities = collections.defaultdict(list)
         self.true_num = collections.defaultdict(int)
+        self.aps = collections.defaultdict(float)
         super(MeanAveragePrecisionEvaluatorForSingleIOU, self).reset()
 
 
-class MeanAveragePrecisionEvaluatorForMultipleIOUs(Evaluator):
+class MeanAveragePrecisionEvaluatorForMultipleIOUs(EvaluatorAggregator):
     DEFAULT_IOU_VALUES = [0.3, 0.5, 0.75, 0.9]
 
     def __init__(self, ious=DEFAULT_IOU_VALUES):
-        self.evaluators = [MeanAveragePrecisionEvaluatorForSingleIOU(iou)
-                           for iou in ious]
-        super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).__init__()
-
-    def add_predictions(self, predictions, targets):
-        for evaluator in self.evaluators:
-            evaluator.add_predictions(predictions, targets)
-
-    def get_report(self, **kwargs):
-        report = {}
-        for evaluator in self.evaluators:
-            report.update(evaluator.get_report(kwargs['average']))
-        return report
-
-    def reset(self):
-        for evaluator in self.evaluators:
-            evaluator.reset()
-        super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).reset()
+        evaluators = [MeanAveragePrecisionEvaluatorForSingleIOU(iou) for iou in ious]
+        super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).__init__(evaluators)
