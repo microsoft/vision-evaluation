@@ -3,7 +3,7 @@ import statistics
 import sklearn.metrics as sm
 import numpy as np
 from abc import ABC, abstractmethod
-from .prediction_filters import PredictionFilter, TopKPredictionFilter, ThresholdPredictionFilter
+from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 from functools import reduce
 
 
@@ -204,6 +204,25 @@ class ThresholdAccuracyEvaluator(Evaluator):
         super(ThresholdAccuracyEvaluator, self).reset()
         self.num_sample = 0
         self.sample_accuracy_sum = 0
+
+
+class F1ScoreEvaluator(EvaluatorAggregator):
+    """
+    F1 score evaluator for both multi-class and multi-label classification, which also reports precision and recall
+    """
+
+    def __init__(self, prediction_filter):
+        super().__init__([RecallEvaluator(prediction_filter), PrecisionEvaluator(prediction_filter)])
+        self._filter_id = prediction_filter.identifier
+
+    def get_report(self, **kwargs):
+        average = kwargs['average'] if 'average' in kwargs else 'macro'
+        report = super(F1ScoreEvaluator, self).get_report(average=average)
+        prec = report[f'precision_{self._filter_id}']
+        recall = report[f'recall_{self._filter_id}']
+        report[f'f1_score_{self._filter_id}'] = 2 * (prec * recall) / (prec + recall) if prec + recall > 0 else 0.0
+
+        return report
 
 
 class PrecisionEvaluator(MemorizingEverythingEvaluator):

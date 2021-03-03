@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
-from vision_evaluation.evaluators import AveragePrecisionEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, _targets_to_mat
+from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
+    PrecisionEvaluator, RecallEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -95,6 +95,25 @@ class TestMultilabelClassificationEvaluator(unittest.TestCase):
             recall_eval = RecallEvaluator(TopKPredictionFilter(ks[i]))
             recall_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
             self.assertAlmostEqual(recall_eval.get_report(average='samples')[f"recall_top{ks[i]}"], expectations[i], places=4)
+
+    def test_f1_score_evaluator(self):
+        thresholds = [0.0, 0.3, 0.6, 0.7]
+        expectations = {'f1': [0.8, 0.94118, 0.57142, 0.44444], 'recall': [1.0, 1.0, 0.5, 0.33333], 'precision': [0.66666, 0.88888, 0.66666, 0.66666]}
+        for i in range(len(thresholds)):
+            recall_eval = F1ScoreEvaluator(ThresholdPredictionFilter(thresholds[i]))
+            recall_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
+            self.assertAlmostEqual(recall_eval.get_report(average='macro')[f"f1_score_thres={thresholds[i]}"], expectations['f1'][i], places=4)
+            self.assertAlmostEqual(recall_eval.get_report(average='macro')[f"recall_thres={thresholds[i]}"], expectations['recall'][i], places=4)
+            self.assertAlmostEqual(recall_eval.get_report(average='macro')[f"precision_thres={thresholds[i]}"], expectations['precision'][i], places=4)
+
+        ks = [0, 1, 2, 3]
+        expectations = {'f1': [0.0, 0.57142, 0.86021, 0.8], 'recall': [0.0, 0.5, 0.83333, 1.0], 'precision': [0, 0.66666, 0.88888, 0.66666]}
+        for i in range(len(ks)):
+            recall_eval = F1ScoreEvaluator(TopKPredictionFilter(ks[i]))
+            recall_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
+            self.assertAlmostEqual(recall_eval.get_report(average='macro')[f"f1_score_top{ks[i]}"], expectations['f1'][i], places=4)
+            self.assertAlmostEqual(recall_eval.get_report(average='macro')[f"recall_top{ks[i]}"], expectations['recall'][i], places=4)
+            self.assertAlmostEqual(recall_eval.get_report(average='macro')[f"precision_top{ks[i]}"], expectations['precision'][i], places=4)
 
 
 class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
