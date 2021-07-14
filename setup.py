@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md'), 'r') as f:
     long_description = f.read()
 
 setuptools.setup(name='vision-evaluation',
-                 author='Ping Jin, Shohei Ono, I-Ting Fang',
+                 author='Ping Jin, Shohei Ono',
                  description="Evaluation code for vision tasks.",
                  long_description=long_description,
                  long_description_content_type="text/markdown",
@@ -29,6 +29,6 @@ setuptools.setup(name='vision-evaluation',
                      'Programming Language :: Python :: 3.8',
                  ],
                  install_requires=[
-                     'numpy~=1.18.3',
+                     'numpy',
                      'sklearn',
                  ])
