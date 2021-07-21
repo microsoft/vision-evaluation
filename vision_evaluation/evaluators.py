@@ -272,8 +272,12 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
 
 class PerTagAccuracyEvaluator(Evaluator):
     """
-    Per Class Accuracy for multiclass classification
+    Per class accuracy for multiclass classification
     """
+
+    def _get_id(self):
+        return 'per_tag_accuracy'
+
     def reset(self):
         super(PerTagAccuracyEvaluator, self).reset()
         self.confusion_matrix = 0
@@ -294,12 +298,12 @@ class PerTagAccuracyEvaluator(Evaluator):
         normalized_cm = self.confusion_matrix.astype('float') / self.confusion_matrix.sum(axis=1)[:, np.newaxis]
         per_class_accuracy = np.nan_to_num(normalized_cm.diagonal())  # avoid nan output
 
-        return {'per_tag_accuracy': list(per_class_accuracy)}
+        return {self._get_id(): list(per_class_accuracy)}
 
 
 class PerTagAveragePrecisionEvaluator(MemorizingEverythingEvaluator):
     """
-    Average Precision evaluator for both multi-class and multi-label classification
+    Per class average precision for multiclass and multilabel classification
     """
 
     def _get_id(self):
