@@ -270,16 +270,12 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
         return sm.average_precision_score(targets, predictions, average=average)
 
 
-class PerClassAccuracyEvaluator(Evaluator):
+class PerTagAccuracyEvaluator(Evaluator):
     """
     Per Class Accuracy for multiclass classification
     """
-
-    def __init__(self):
-        super(PerClassAccuracyEvaluator, self).__init__()
-
     def reset(self):
-        super(PerClassAccuracyEvaluator, self).reset()
+        super(PerTagAccuracyEvaluator, self).reset()
         self.confusion_matrix = 0
 
     def add_predictions(self, predictions, targets):
@@ -295,39 +291,30 @@ class PerClassAccuracyEvaluator(Evaluator):
         self.confusion_matrix = np.add(self.confusion_matrix, sm.confusion_matrix(targets, prediction_cls))
 
     def get_report(self, **kwargs):
-        """ Get per class accuracy report.
-        Args:
-            labels : the list of class names the same order as the targets label index
-        """
-        assert 'labels' in kwargs
-        normalized_cm = self.confusion_matrix .astype('float') / self.confusion_matrix.sum(axis=1)[:, np.newaxis]
+        normalized_cm = self.confusion_matrix.astype('float') / self.confusion_matrix.sum(axis=1)[:, np.newaxis]
         per_class_accuracy = np.nan_to_num(normalized_cm.diagonal())  # avoid nan output
 
-        return {'per_tag_performance': {kwargs['labels'][i]: {'accuracy': per_class_accuracy[i]} for i in range(len(per_class_accuracy))}}
+        return {'per_tag_accuracy': list(per_class_accuracy)}
 
 
-class PerClassAveragePrecisionEvaluator(MemorizingEverythingEvaluator):
+class PerTagAveragePrecisionEvaluator(MemorizingEverythingEvaluator):
     """
     Average Precision evaluator for both multi-class and multi-label classification
     """
 
-    def __init__(self):
-        super().__init__()
-
     def _get_id(self):
-        return 'per_tag_performance'
+        return 'per_tag_average_precision'
 
     def _calculate(self, targets, predictions, average):
         return sm.average_precision_score(targets, predictions, average=None)
 
     def get_report(self, **kwargs):
         """ Get per class accuracy report.
-        Args:
-            labels : the list of class names the same order as the targets label index
+        return:
+            performance: list of float
         """
-        assert 'labels' in kwargs
         per_class_ap = self.calculate_score()
-        return {self._get_id(): {kwargs['labels'][i]: {'average_precision': per_class_ap[i]} for i in range(len(per_class_ap))}}
+        return {self._get_id(): list(per_class_ap)}
 
 
 class EceLossEvaluator(Evaluator):
@@ -483,20 +470,16 @@ class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
         return sm.average_precision_score(is_correct, probabilities, average=average) * recall
 
     def get_report(self, **kwargs):
-        """
-        Args:
-            labels : If report_per_class, pass the list of class names the same order as the ground_truths label index
-        """
         average = kwargs['average'] if 'average' in kwargs else 'macro'
         for class_index in self.is_correct:
             ap = MeanAveragePrecisionEvaluatorForSingleIOU._calculate_average_precision(self.is_correct[class_index], self.probabilities[class_index], self.true_num[class_index], average)
             self.aps[class_index] = ap
 
         mean_ap = float(statistics.mean([self.aps[x] for x in self.aps])) if self.aps else 0.0
-        report = {f'mAP_{int(self.iou * 100)}': mean_ap}
+        key_name = f'mAP_{int(self.iou * 100)}'
+        report = {key_name: mean_ap}
         if self.report_per_class:
-            assert 'labels' in kwargs
-            report['per_tag_performance'] = {kwargs['labels'][class_index]: {f'mAP_{int(self.iou * 100)}': self.aps[class_index]} for class_index in self.aps}
+            report[f'per_tag_{key_name}'] = [self.aps[class_index] for class_index in self.aps]
         return report
 
     def reset(self):

@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, PerClassAccuracyEvaluator, PerClassAveragePrecisionEvaluator
+    PrecisionEvaluator, RecallEvaluator, PerTagAccuracyEvaluator, PerTagAveragePrecisionEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -58,20 +58,18 @@ class TestClassificationEvaluator(unittest.TestCase):
         self.assertEqual(thresh05_evaluator.get_report()["accuracy_thres=0.5"], 0.35)
 
     def test_perclass_accuracy_evaluator(self):
-        evaluator = PerClassAccuracyEvaluator()
-        labels = ['cls_a', 'cls_b']
+        evaluator = PerTagAccuracyEvaluator()
         evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        result = evaluator.get_report(labels=labels)
-        self.assertAlmostEqual(result['per_tag_performance']['cls_a']['accuracy'], 0.33333, 5)
-        self.assertEqual(result['per_tag_performance']['cls_b']['accuracy'], 0.5)
+        result = evaluator.get_report()
+        self.assertAlmostEqual(result['per_tag_accuracy'][0], 0.33333, 5)
+        self.assertEqual(result['per_tag_accuracy'][1], 0.5)
 
     def test_perclass_average_precision_evaluator(self):
-        labels = ['cls_a', 'cls_b']
-        evaluator = PerClassAveragePrecisionEvaluator()
+        evaluator = PerTagAveragePrecisionEvaluator()
         evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        result = evaluator.get_report(labels=labels)
-        self.assertAlmostEqual(result['per_tag_performance']['cls_a']['average_precision'], 0.54940, 5)
-        self.assertAlmostEqual(result['per_tag_performance']['cls_b']['average_precision'], 0.40208, 5)
+        result = evaluator.get_report()
+        self.assertAlmostEqual(result['per_tag_average_precision'][0], 0.54940, 5)
+        self.assertAlmostEqual(result['per_tag_average_precision'][1], 0.40208, 5)
 
 
 class TestMultilabelClassificationEvaluator(unittest.TestCase):
@@ -201,12 +199,11 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
                     [1, 0.5, 0.5, 1, 1]],
                    [[2, 0.1, 0.1, 0.5, 0.5]]]
 
-        labels = ['cls_a', 'cls_b', 'cls_c']
         evaluator.add_predictions(predictions, targets)
-        report = evaluator.get_report(labels=labels)
+        report = evaluator.get_report()
         self.assertEqual(report["mAP_50"], 0.75)
         self.assertTrue(isinstance(report["mAP_50"], float))
-        self.assertEqual(len(report["per_tag_performance"]), len(labels))
+        self.assertEqual(len(report["per_tag_mAP_50"]), 3)
 
     def test_iou_threshold(self):
         evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5)

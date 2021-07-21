@@ -2,5 +2,5 @@ from .evaluators import MeanAveragePrecisionEvaluatorForMultipleIOUs, MeanAverag
     RecallEvaluator, AveragePrecisionEvaluator, EceLossEvaluator, F1ScoreEvaluator, Evaluator, MemorizingEverythingEvaluator, EvaluatorAggregator
 
 __all__ = ['MeanAveragePrecisionEvaluatorForMultipleIOUs', 'MeanAveragePrecisionEvaluatorForSingleIOU', 'TopKAccuracyEvaluator', 'ThresholdAccuracyEvaluator', 'PrecisionEvaluator', 'RecallEvaluator',
-           "AveragePrecisionEvaluator", "EceLossEvaluator", 'F1ScoreEvaluator', 'Evaluator', 'MemorizingEverythingEvaluator', 'EvaluatorAggregator', 'PerClassAccuracyEvaluator',
-           'PerClassAveragePrecisionEvaluator']
+           "AveragePrecisionEvaluator", "EceLossEvaluator", 'F1ScoreEvaluator', 'Evaluator', 'MemorizingEverythingEvaluator', 'EvaluatorAggregator', 'PerTagAccuracyEvaluator',
+           'PerTagAveragePrecisionEvaluator']
