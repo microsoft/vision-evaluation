@@ -486,7 +486,7 @@ class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
         key_name = f'mAP_{int(self.iou * 100)}'
         report = {key_name: mean_ap}
         if self.report_tag_wise:
-            report[f'tag_wise_{key_name}'] = [self.aps[class_index] for class_index in self.aps]
+            report[f'tag_wise_AP_{int(self.iou * 100)}'] = [self.aps[class_index] for class_index in self.aps]
         return report
 
     def reset(self):

@@ -203,7 +203,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         report = evaluator.get_report()
         self.assertEqual(report["mAP_50"], 0.75)
         self.assertTrue(isinstance(report["mAP_50"], float))
-        self.assertEqual(len(report["per_tag_mAP_50"]), 3)
+        self.assertEqual(len(report["per_tag_AP_50"]), 3)
 
     def test_iou_threshold(self):
         evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5)
