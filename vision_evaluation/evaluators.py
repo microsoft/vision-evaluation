@@ -270,6 +270,60 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
         return sm.average_precision_score(targets, predictions, average=average)
 
 
+class TagWiseAccuracyEvaluator(Evaluator):
+    """
+    Tag wise accuracy for multiclass classification
+    """
+
+    def _get_id(self):
+        return 'tag_wise_accuracy'
+
+    def reset(self):
+        super(TagWiseAccuracyEvaluator, self).reset()
+        self.confusion_matrix = 0
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: the model output numpy array. Shape (N, num_class)
+            targets: the golden truths. Shape (N,)
+        """
+        assert len(predictions) == len(targets)
+        assert len(targets.shape) == 1
+
+        prediction_cls = np.argmax(predictions, axis=1)
+        self.confusion_matrix = np.add(self.confusion_matrix, sm.confusion_matrix(targets, prediction_cls))
+
+    def get_report(self, **kwargs):
+        normalized_cm = self.confusion_matrix.astype('float') / self.confusion_matrix.sum(axis=1)[:, np.newaxis]
+        per_class_accuracy = np.nan_to_num(normalized_cm.diagonal())  # avoid nan output
+
+        return {self._get_id(): list(per_class_accuracy)}
+
+
+class TagWiseAveragePrecisionEvaluator(MemorizingEverythingEvaluator):
+    """
+    Tag wise average precision for multiclass and multilabel classification
+    """
+
+    def _get_id(self):
+        return 'tag_wise_average_precision'
+
+    def _calculate(self, targets, predictions, average):
+        """
+        Average is ignored and set to be None, calcluate average precision for each class
+        """
+        return sm.average_precision_score(targets, predictions, average=None)
+
+    def get_report(self, **kwargs):
+        """ Get per class accuracy report.
+        return:
+            performance: list of float
+        """
+        per_class_ap = self.calculate_score()
+        return {self._get_id(): list(per_class_ap)}
+
+
 class EceLossEvaluator(Evaluator):
     """
     Computes the expected calibration error (ECE) given the model confidence and true labels for a set of data points.
@@ -317,9 +371,15 @@ class EceLossEvaluator(Evaluator):
 
 
 class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
-    def __init__(self, iou=0.5):
+    def __init__(self, iou=0.5, report_tag_wise=False):
+        """
+        Args:
+            iou: float, single IoU for matching
+            report_tag_wise: if assigned True, also return the per class average precision
+        """
         super(MeanAveragePrecisionEvaluatorForSingleIOU, self).__init__()
         self.iou = iou
+        self.report_tag_wise = report_tag_wise
 
     def add_predictions(self, predictions, targets):
         """ Evaluate list of image with object detection results using single IOU evaluation.
@@ -423,7 +483,11 @@ class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
             self.aps[class_index] = ap
 
         mean_ap = float(statistics.mean([self.aps[x] for x in self.aps])) if self.aps else 0.0
-        return {f'mAP_{int(self.iou * 100)}': mean_ap}
+        key_name = f'mAP_{int(self.iou * 100)}'
+        report = {key_name: mean_ap}
+        if self.report_tag_wise:
+            report[f'tag_wise_AP_{int(self.iou * 100)}'] = [self.aps[class_index] for class_index in self.aps]
+        return report
 
     def reset(self):
         self.is_correct = collections.defaultdict(list)
@@ -436,6 +500,10 @@ class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
 class MeanAveragePrecisionEvaluatorForMultipleIOUs(EvaluatorAggregator):
     DEFAULT_IOU_VALUES = [0.3, 0.5, 0.75, 0.9]
 
-    def __init__(self, ious=DEFAULT_IOU_VALUES):
-        evaluators = [MeanAveragePrecisionEvaluatorForSingleIOU(iou) for iou in ious]
+    def __init__(self, ious=DEFAULT_IOU_VALUES, report_tag_wise=None):
+        if not report_tag_wise:
+            report_tag_wise = len(ious) * [False]
+
+        assert len(ious) == len(report_tag_wise)
+        evaluators = [MeanAveragePrecisionEvaluatorForSingleIOU(ious[i], report_tag_wise[i]) for i in range(len(ious))]
         super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).__init__(evaluators)

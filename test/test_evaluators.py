@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator
+    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -56,6 +56,20 @@ class TestClassificationEvaluator(unittest.TestCase):
         thresh05_evaluator = ThresholdAccuracyEvaluator(0.5)
         thresh05_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
         self.assertEqual(thresh05_evaluator.get_report()["accuracy_thres=0.5"], 0.35)
+
+    def test_perclass_accuracy_evaluator(self):
+        evaluator = TagWiseAccuracyEvaluator()
+        evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
+        result = evaluator.get_report()
+        self.assertAlmostEqual(result['tag_wise_accuracy'][0], 0.33333, 5)
+        self.assertEqual(result['tag_wise_accuracy'][1], 0.5)
+
+    def test_perclass_average_precision_evaluator(self):
+        evaluator = TagWiseAveragePrecisionEvaluator()
+        evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
+        result = evaluator.get_report()
+        self.assertAlmostEqual(result['tag_wise_average_precision'][0], 0.54940, 5)
+        self.assertAlmostEqual(result['tag_wise_average_precision'][1], 0.40208, 5)
 
 
 class TestMultilabelClassificationEvaluator(unittest.TestCase):
@@ -165,7 +179,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_two_batches(self):
-        evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5)
+        evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5, report_tag_wise=True)
 
         predictions = [[[0, 1.0, 0, 0, 1, 1],
                         [1, 1.0, 0.5, 0.5, 1, 1]],
@@ -189,6 +203,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         report = evaluator.get_report()
         self.assertEqual(report["mAP_50"], 0.75)
         self.assertTrue(isinstance(report["mAP_50"], float))
+        self.assertEqual(len(report["tag_wise_AP_50"]), 3)
 
     def test_iou_threshold(self):
         evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5)
