@@ -64,6 +64,20 @@ class TestClassificationEvaluator(unittest.TestCase):
         self.assertAlmostEqual(result['tag_wise_accuracy'][0], 0.33333, 5)
         self.assertEqual(result['tag_wise_accuracy'][1], 0.5)
 
+    def test_perclass_accuracy_evaluator_with_missing_class(self):
+        target_missing_class = np.array([0, 1, 0, 0])
+        predicitons_missing_class = np.array([[1, 0, 0],
+                                              [0, 1, 0],
+                                              [0.5, 0.5, 0],
+                                              [0.1, 0.9, 0]])
+        evaluator = TagWiseAccuracyEvaluator()
+        evaluator.add_predictions(predicitons_missing_class, target_missing_class)
+        result = evaluator.get_report()
+        self.assertEqual(len(result['tag_wise_accuracy']), 3)
+        self.assertAlmostEqual(result['tag_wise_accuracy'][0], 0.666666, 5)
+        self.assertEqual(result['tag_wise_accuracy'][1], 1.0)
+        self.assertEqual(result['tag_wise_accuracy'][2], 0.0)
+
     def test_perclass_average_precision_evaluator(self):
         evaluator = TagWiseAveragePrecisionEvaluator()
         evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)

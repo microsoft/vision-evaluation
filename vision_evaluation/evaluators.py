@@ -292,7 +292,7 @@ class TagWiseAccuracyEvaluator(Evaluator):
         assert len(targets.shape) == 1
 
         prediction_cls = np.argmax(predictions, axis=1)
-        self.confusion_matrix = np.add(self.confusion_matrix, sm.confusion_matrix(targets, prediction_cls, labels = np.arange(predictions.shape[1])))
+        self.confusion_matrix = np.add(self.confusion_matrix, sm.confusion_matrix(targets, prediction_cls, labels=np.arange(predictions.shape[1])))
 
     def get_report(self, **kwargs):
         normalized_cm = self.confusion_matrix.astype('float') / self.confusion_matrix.sum(axis=1)[:, np.newaxis]
