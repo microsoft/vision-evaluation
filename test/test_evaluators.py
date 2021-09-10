@@ -85,6 +85,14 @@ class TestClassificationEvaluator(unittest.TestCase):
         self.assertAlmostEqual(result['tag_wise_average_precision'][0], 0.54940, 5)
         self.assertAlmostEqual(result['tag_wise_average_precision'][1], 0.40208, 5)
 
+        # multilabel with only one class, but without negative tags, precision is meaningless
+        targets_single_cls = np.array([[1],[1],[1]])
+        predictions_single_cls = np.array([[0], [0], [1]])
+        evaluator_single_cls = TagWiseAveragePrecisionEvaluator()
+        evaluator_single_cls.add_predictions(predictions_single_cls, targets_single_cls)
+        result = evaluator_single_cls.get_report()
+        self.assertAlmostEqual(result['tag_wise_average_precision'][0], 1, 5)
+
 
 class TestMultilabelClassificationEvaluator(unittest.TestCase):
     TARGETS = np.array([[1, 0, 0],
