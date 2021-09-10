@@ -321,7 +321,7 @@ class TagWiseAveragePrecisionEvaluator(MemorizingEverythingEvaluator):
             performance: list of float
         """
         per_class_ap = self.calculate_score()
-        return {self._get_id(): list(per_class_ap)}
+        return {self._get_id(): list(per_class_ap) if not isinstance(per_class_ap, float) else [per_class_ap]}
 
 
 class EceLossEvaluator(Evaluator):
