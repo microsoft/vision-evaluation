@@ -507,3 +507,50 @@ class MeanAveragePrecisionEvaluatorForMultipleIOUs(EvaluatorAggregator):
         assert len(ious) == len(report_tag_wise)
         evaluators = [MeanAveragePrecisionEvaluatorForSingleIOU(ious[i], report_tag_wise[i]) for i in range(len(ious))]
         super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).__init__(evaluators)
+
+
+class AveragePrecisionNPointsEvaluator(Evaluator):
+    """
+    N-point interpolated average precision
+    """
+
+    def __init__(self, N=11):
+        """
+        Args:
+            N: Number of partition
+        """
+        super(AveragePrecisionNPointsEvaluator, self).__init__()
+        self.N = N
+        self.id = f"{N}_points_AP"
+
+    def _get_id(self):
+        return self.id
+
+    def reset(self):
+        super(AveragePrecisionNPointsEvaluator, self).reset()
+        self.precision_sum = 0
+        self.AP_N_points = 0
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: the probability of the data to be 'positive'. Shape (N,)
+            targets: the binary ground truths in {0, 1} or {-1, 1}. Shape (N,)
+        """
+        assert len(predictions) == len(targets)
+        assert len(targets.shape) == 1
+
+        precision, recall, _ = sm.precision_recall_curve(targets, predictions)
+        recall_thresholds = np.linspace(1, 0, self.N, endpoint=True).tolist()
+        self.precision_sum = 0
+        recall_idx = 0
+        precision_tmp = 0
+        for threshold in recall_thresholds:
+            while recall_idx < len(recall) and threshold <= recall[recall_idx]:
+                precision_tmp = max(precision_tmp, precision[recall_idx])
+                recall_idx += 1
+            self.precision_sum += precision_tmp
+        self.AP_N_points = self.precision_sum / self.N
+
+    def get_report(self, **kwargs):
+        return {self._get_id(): self.AP_N_points}
