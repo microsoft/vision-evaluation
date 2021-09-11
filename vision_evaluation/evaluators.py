@@ -514,14 +514,14 @@ class AveragePrecisionNPointsEvaluator(Evaluator):
     N-point interpolated average precision
     """
 
-    def __init__(self, N=11):
+    def __init__(self, n_points=11):
         """
         Args:
-            N: Number of partition
+            N: Number of points
         """
         super(AveragePrecisionNPointsEvaluator, self).__init__()
-        self.N = N
-        self.id = f"{N}_points_AP"
+        self.n_points = n_points
+        self.id = f"{n_points}_points_AP"
 
     def _get_id(self):
         return self.id
@@ -529,7 +529,7 @@ class AveragePrecisionNPointsEvaluator(Evaluator):
     def reset(self):
         super(AveragePrecisionNPointsEvaluator, self).reset()
         self.precision_sum = 0
-        self.AP_N_points = 0
+        self.ap_n_points = 0
 
     def add_predictions(self, predictions, targets):
         """ Evaluate a batch of predictions.
@@ -541,7 +541,7 @@ class AveragePrecisionNPointsEvaluator(Evaluator):
         assert len(targets.shape) == 1
 
         precision, recall, _ = sm.precision_recall_curve(targets, predictions)
-        recall_thresholds = np.linspace(1, 0, self.N, endpoint=True).tolist()
+        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
         self.precision_sum = 0
         recall_idx = 0
         precision_tmp = 0
@@ -550,7 +550,7 @@ class AveragePrecisionNPointsEvaluator(Evaluator):
                 precision_tmp = max(precision_tmp, precision[recall_idx])
                 recall_idx += 1
             self.precision_sum += precision_tmp
-        self.AP_N_points = self.precision_sum / self.N
+        self.ap_n_points = self.precision_sum / self.n_points
 
     def get_report(self, **kwargs):
-        return {self._get_id(): self.AP_N_points}
+        return {self._get_id(): self.ap_n_points}
