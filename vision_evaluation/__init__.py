@@ -3,4 +3,4 @@ from .evaluators import MeanAveragePrecisionEvaluatorForMultipleIOUs, MeanAverag
 
 __all__ = ['MeanAveragePrecisionEvaluatorForMultipleIOUs', 'MeanAveragePrecisionEvaluatorForSingleIOU', 'TopKAccuracyEvaluator', 'ThresholdAccuracyEvaluator', 'PrecisionEvaluator', 'RecallEvaluator',
            "AveragePrecisionEvaluator", "EceLossEvaluator", 'F1ScoreEvaluator', 'Evaluator', 'MemorizingEverythingEvaluator', 'EvaluatorAggregator', 'TagWiseAccuracyEvaluator',
-           'TagWiseAveragePrecisionEvaluator']
+           'TagWiseAveragePrecisionEvaluator', 'AveragePrecisionNPointsEvaluator']

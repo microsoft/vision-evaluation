@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator
+    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, AveragePrecisionNPointsEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -86,7 +86,7 @@ class TestClassificationEvaluator(unittest.TestCase):
         self.assertAlmostEqual(result['tag_wise_average_precision'][1], 0.40208, 5)
 
         # multilabel with only one class, but without negative tags, precision is meaningless
-        targets_single_cls = np.array([[1],[1],[1]])
+        targets_single_cls = np.array([[1], [1], [1]])
         predictions_single_cls = np.array([[0], [0], [1]])
         evaluator_single_cls = TagWiseAveragePrecisionEvaluator()
         evaluator_single_cls.add_predictions(predictions_single_cls, targets_single_cls)
@@ -287,3 +287,23 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         self.assertIn('mAP_50', report)
         self.assertEqual(report["mAP_50"], 0.0)
         self.assertTrue(isinstance(report["mAP_50"], float))
+
+
+class TestAveragePrecisionNPoints(unittest.TestCase):
+    TARGETS = np.array([[1, 0], [0, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1], [1, 0]])
+    PREDICTIONS = np.array([[1, 0],
+                            [0, 1],
+                            [0.5, 0.5],
+                            [0.1, 0.9],
+                            [0.44, 0.56],
+                            [0.09, 0.91],
+                            [0.91, 0.09],
+                            [0.37, 0.63],
+                            [0.34, 0.66],
+                            [0.89, 0.11]])
+
+    def test_average_precision_n_points(self):
+        evaluator = AveragePrecisionNPointsEvaluator(11)
+        evaluator.add_predictions(predictions=self.PREDICTIONS[:, 0], targets=self.TARGETS[:, 1])
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report[evaluator._get_id()], 0.65454545454545, places=4)
