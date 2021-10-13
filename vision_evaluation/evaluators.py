@@ -520,8 +520,6 @@ class BalancedAccuracyScoreEvaluator(MemorizingEverythingEvaluator):
     def _calculate(self, targets, predictions, average):
         single_targets = np.argmax(targets, axis=1)
         y_single_preds = np.argmax(predictions, axis=1)
-        print(single_targets)
-        print(y_single_preds)
         return balanced_accuracy_score(single_targets, y_single_preds)
 
     def _get_id(self):
