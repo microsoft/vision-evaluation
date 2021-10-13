@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, AveragePrecisionNPointsEvaluator
+    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -289,7 +289,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
 
 
-class TestAveragePrecisionNPoints(unittest.TestCase):
+class TestMeanAveragePrecisionNPoints(unittest.TestCase):
     TARGETS = np.array([[1, 0], [0, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1], [1, 0]])
     PREDICTIONS = np.array([[1, 0],
                             [0, 1],
@@ -302,8 +302,28 @@ class TestAveragePrecisionNPoints(unittest.TestCase):
                             [0.34, 0.66],
                             [0.89, 0.11]])
 
-    def test_average_precision_n_points(self):
-        evaluator = AveragePrecisionNPointsEvaluator(11)
-        evaluator.add_predictions(predictions=self.PREDICTIONS[:, 0], targets=self.TARGETS[:, 1])
+    def test_mean_average_precision_n_points(self):
+        evaluator = MeanAveragePrecisionNPointsEvaluator(11)
+        evaluator.add_predictions(predictions=self.PREDICTIONS, targets=self.TARGETS)
         report = evaluator.get_report()
-        self.assertAlmostEqual(report[evaluator._get_id()], 0.65454545454545, places=4)
+        self.assertAlmostEqual(report[evaluator._get_id()], 0.7406926406926406, places=4)
+
+
+class TestBalancedScoreEvaluator(unittest.TestCase):
+    TARGETS = np.array([0, 1, 0, 1, 0, 0, 0, 1, 0, 1])
+    PREDICTIONS = np.array([[1, 0],
+                            [0, 1],
+                            [0.6, 0.4],
+                            [0.1, 0.9],
+                            [0.44, 0.56],
+                            [0.09, 0.91],
+                            [0.91, 0.09],
+                            [0.37, 0.63],
+                            [0.34, 0.66],
+                            [0.89, 0.11]])
+
+    def test_balanced_evaluator(self):
+        evaluator = BalancedAccuracyScoreEvaluator()
+        evaluator.add_predictions(predictions=self.PREDICTIONS, targets=self.TARGETS)
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report[evaluator._get_id()], 0.625, places=4)

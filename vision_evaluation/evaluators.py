@@ -3,6 +3,9 @@ import statistics
 import sklearn.metrics as sm
 import numpy as np
 from abc import ABC, abstractmethod
+
+from sklearn.metrics import balanced_accuracy_score
+
 from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 from functools import reduce
 
@@ -509,29 +512,35 @@ class MeanAveragePrecisionEvaluatorForMultipleIOUs(EvaluatorAggregator):
         super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).__init__(evaluators)
 
 
-class AveragePrecisionNPointsEvaluator(Evaluator):
+class BalancedAccuracyScoreEvaluator(MemorizingEverythingEvaluator):
     """
-    N-point interpolated average precision
+    Average of recall obtained on each class, for multiclass classifiation problem
+    """
+
+    def _calculate(self, targets, predictions, average):
+        single_targets = np.argmax(targets, axis=1)
+        y_single_preds = np.argmax(predictions, axis=1)
+        return balanced_accuracy_score(single_targets, y_single_preds)
+
+    def _get_id(self):
+        return 'balanced_accuracy'
+
+
+class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
+    """
+    N-point interpolated average precision, averaged over classes
     """
 
     def __init__(self, n_points=11):
-        """
-        Args:
-            N: Number of points
-        """
-        super(AveragePrecisionNPointsEvaluator, self).__init__()
+        super().__init__()
+        self.ap_n_points_eval = []
         self.n_points = n_points
-        self.id = f"{n_points}_points_AP"
 
-    def _get_id(self):
-        return self.id
+    def _calculate(self, targets, predictions, average):
+        n_class = predictions.shape[1]
+        return np.mean([self._per_class_calc(predictions[:, i], targets[:, i]) for i in range(n_class)])
 
-    def reset(self):
-        super(AveragePrecisionNPointsEvaluator, self).reset()
-        self.precision_sum = 0
-        self.ap_n_points = 0
-
-    def add_predictions(self, predictions, targets):
+    def _per_class_calc(self, predictions, targets):
         """ Evaluate a batch of predictions.
         Args:
             predictions: the probability of the data to be 'positive'. Shape (N,)
@@ -542,15 +551,15 @@ class AveragePrecisionNPointsEvaluator(Evaluator):
 
         precision, recall, _ = sm.precision_recall_curve(targets, predictions)
         recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
-        self.precision_sum = 0
+        precision_sum = 0
         recall_idx = 0
         precision_tmp = 0
         for threshold in recall_thresholds:
             while recall_idx < len(recall) and threshold <= recall[recall_idx]:
                 precision_tmp = max(precision_tmp, precision[recall_idx])
                 recall_idx += 1
-            self.precision_sum += precision_tmp
-        self.ap_n_points = self.precision_sum / self.n_points
+            precision_sum += precision_tmp
+        return precision_sum / self.n_points
 
-    def get_report(self, **kwargs):
-        return {self._get_id(): self.ap_n_points}
+    def _get_id(self):
+        return f'{self.n_points}_points_mAP'
