@@ -562,4 +562,4 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
         return precision_sum / self.n_points
 
     def _get_id(self):
-        return f'{self.n_points}_points_mAP'
+        return f'mAP_{self.n_points}_points'
