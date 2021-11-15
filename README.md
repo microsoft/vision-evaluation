@@ -14,7 +14,8 @@ This repo currently offers evaluation metrics for two vision tasks:
     - `EceLossEvaluator`: computes the [ECE loss](https://arxiv.org/pdf/1706.04599.pdf), i.e., the expected calibration error, given the model confidence and true labels for a set of data points. 
 - **Object detection**:
     - `MeanAveragePrecisionEvaluatorForSingleIOU`, `evaluators.MeanAveragePrecisionEvaluatorForMultipleIOUs`: computes the mean average precision (mAP), i.e. mean average precision across different classes, under single or multiple [IoU(s)](https://en.wikipedia.org/wiki/Jaccard_index).
-    
+    - `evaluators.CocoMeanAveragePrecisionEvaluator`: Coco mAP computation for multiple IoUs.
+
 While different machine learning problems/applications prefer different metrics, below are some general recommendations:
 - **Multiclass classification**: Top-1 accuracy and Top-5 accuracy
 - **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
