@@ -31,4 +31,5 @@ setuptools.setup(name='vision-evaluation',
                  install_requires=[
                      'numpy',
                      'sklearn',
+                     'pycocotools'
                  ])

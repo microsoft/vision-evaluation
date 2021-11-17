@@ -512,6 +512,117 @@ class MeanAveragePrecisionEvaluatorForMultipleIOUs(EvaluatorAggregator):
         super(MeanAveragePrecisionEvaluatorForMultipleIOUs, self).__init__(evaluators)
 
 
+class CocoMeanAveragePrecisionEvaluator(Evaluator):
+    """ Coco mAP evaluator. Adapted to have the same interface as other evaluators.
+    Source: https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py
+    This evaluator is an alternative of MeanAveragePrecisionEvaluatorForMultipleIOUs. Difference is
+    the way to compute average precision: Coco computes area under curve with trapezoidal rule and
+    linear interpolation, while the latter uses sklearn implementation. Coco can be too optimistic.
+    """
+
+    DEFAULT_IOU_VALUES = [0.3, 0.5, 0.75, 0.9]
+
+    def __init__(self, ious=DEFAULT_IOU_VALUES, report_tag_wise=None):
+        """ Initialize evaluator by specified ious and indicators of whether to report tag-wise mAP.
+        Args:
+            ious: list of ious.
+            report_tag_wise: None or list of booleans with the same size as `ious`. True value means the
+                for the corresponding iou, mAPs of each tag will be reported.
+        """
+        super(CocoMeanAveragePrecisionEvaluator, self).__init__()
+        if not report_tag_wise:
+            report_tag_wise = len(ious) * [False]
+        assert len(ious) == len(report_tag_wise)
+        self.ious = ious
+        self.report_tag_wise = report_tag_wise
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate list of image with object detection results using mscoco evaluation.
+        Args:
+            predictions: list of predictions [[[label_idx, probability, L, T, R, B], ...], [...], ...]
+            targets: list of image targets [[[label_idx, L, T, R, B], ...], ...]
+
+        """
+        self.targets += targets
+        self.predictions += predictions
+
+    def _coco_eval(self):
+        from pycocotools.cocoeval import COCOeval
+        from .coco_wrapper import COCOWrapper
+
+        wrapper = COCOWrapper()
+        coco_ground_truths = wrapper.load_annotation(self.targets, 'gt')
+        coco_predictions = wrapper.load_annotation(self.predictions, 'prediction')
+
+        coco_eval = COCOeval(coco_ground_truths, coco_predictions, 'bbox')
+
+        # only care all the boxes for now
+        coco_eval.params.areaRngLbl = ['all']
+
+        # set param for normalized coordinate
+        coco_eval.params.areaRng = [[0, 1.0]]
+
+        # max detection allow for each image is 300, could test for other settings
+        coco_eval.params.maxDets = [300]
+
+        coco_eval.params.iouThrs = self.ious
+        coco_eval.evaluate()
+        coco_eval.accumulate()
+
+        return coco_eval
+
+    def _summarize(self, cocoresult, ap=1, iouThr=None, areaRng='all', maxDets=100, catId=None):
+        # Adapted from https://github.com/cocodataset/cocoapi/blob/8c9bcc3cf640524c4c20a9c40e89cb6a2f2fa0e9/PythonAPI/pycocotools/cocoeval.py#L427
+        p = cocoresult.params
+        iouThrs = np.array(p.iouThrs)
+        # indices of categories, either all categoires or the specified catId
+        cind = p.catIds if catId is None else [catId]
+
+        aind = [i for i, aRng in enumerate(p.areaRngLbl) if aRng == areaRng]
+        mind = [i for i, mDet in enumerate(p.maxDets) if mDet == maxDets]
+
+        if ap == 1:
+            # dimension of precision: [TxRxKxAxM]
+            s = cocoresult.eval['precision']
+            # IoU
+            if iouThr is not None:
+                t = np.where(iouThr == iouThrs)[0]
+                s = s[t]
+            s = s[:, :, cind, aind, mind]
+        else:
+            # dimension of recall: [TxKxAxM]
+            s = cocoresult.eval['recall']
+            if iouThr is not None:
+                t = np.where(iouThr == iouThrs)[0]
+                s = s[t]
+            s = s[:, cind, aind, mind]
+        if len(s[s > -1]) == 0:
+            mean_s = 0.
+        else:
+            mean_s = np.mean(s[s > -1])
+        return mean_s
+
+    def get_report(self, **kwargs):
+        cocoresult = self._coco_eval()
+        report = {'avg_mAP': self._summarize(cocoresult, 1, maxDets=cocoresult.params.maxDets[-1])}
+        # mAP for each iou
+        report.update(
+            {f'mAP_{int(iou * 100)}': self._summarize(cocoresult, 1, iou, maxDets=cocoresult.params.maxDets[-1])
+            for iou in self.ious}
+        )
+        # tag-wise mAP
+        for iou, iou_report_tag_wise in zip(self.ious, self.report_tag_wise):
+            if iou_report_tag_wise:
+                report[f'tag_wise_AP_{int(iou * 100)}'] = [self._summarize(cocoresult, 1, iou, maxDets=cocoresult.params.maxDets[-1], catId=cat_id) for cat_id in cocoresult.params.catIds]
+
+        return report
+
+    def reset(self):
+        super(CocoMeanAveragePrecisionEvaluator, self).reset()
+        self.targets = []
+        self.predictions = []
+
+
 class BalancedAccuracyScoreEvaluator(MemorizingEverythingEvaluator):
     """
     Average of recall obtained on each class, for multiclass classifiation problem
