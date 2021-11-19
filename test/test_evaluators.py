@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, CocoMeanAveragePrecisionEvaluator
+    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
+    CocoMeanAveragePrecisionEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -153,6 +154,22 @@ class TestMultilabelClassificationEvaluator(unittest.TestCase):
 
 
 class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
+    def test_perfect_one_image_absolute_coordinates(self):
+        evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5)
+
+        predictions = [[[0, 1.0, 0, 0, 10, 10],
+                        [1, 1.0, 5, 5, 10, 10],
+                        [2, 1.0, 1, 1, 5, 5]]]
+
+        targets = [[[0, 0, 0, 10, 10],
+                    [1, 5, 5, 10, 10],
+                    [2, 1, 1, 5, 5]]]
+
+        evaluator.add_predictions(predictions, targets)
+        report = evaluator.get_report()
+        self.assertEqual(report["mAP_50"], 1.0)
+        self.assertTrue(isinstance(report["mAP_50"], float))
+
     def test_perfect_one_image(self):
         evaluator = MeanAveragePrecisionEvaluatorForSingleIOU(iou=0.5)
 
@@ -330,8 +347,24 @@ class TestBalancedScoreEvaluator(unittest.TestCase):
 
 
 class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
-    def test_perfect_one_image(self):
+    def test_perfect_one_image_absolute_coordinates(self):
         evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+
+        predictions = [[[0, 1.0, 0, 0, 10, 10],
+                        [1, 1.0, 5, 5, 10, 10],
+                        [2, 1.0, 1, 1, 5, 5]]]
+
+        targets = [[[0, 0, 0, 10, 10],
+                    [1, 5, 5, 10, 10],
+                    [2, 1, 1, 5, 5]]]
+
+        evaluator.add_predictions(predictions, targets)
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report["mAP_50"], 1.0, places=8)
+        self.assertTrue(isinstance(report["mAP_50"], float))
+
+    def test_perfect_one_image(self):
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], coordinates='relative')
 
         predictions = [[[0, 1.0, 0, 0, 1, 1],
                         [1, 1.0, 0.5, 0.5, 1, 1],
@@ -348,7 +381,7 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
 
     def test_wrong_one_image(self):
         # result for tag 0 different from TestMeanAveragePrecisionNPoints
-        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], coordinates='relative')
 
         predictions = [[[0, 1.0, 0, 0, 1, 1],
                         [0, 1.0, 0.5, 0.5, 1, 1],
@@ -364,7 +397,7 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_perfect_two_images(self):
-        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], coordinates='relative')
 
         predictions = [[[0, 1.0, 0, 0, 1, 1],
                         [1, 1.0, 0.5, 0.5, 1, 1]],
@@ -381,7 +414,7 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
 
     def test_two_batches(self):
         # result for tag 0 different from TestMeanAveragePrecisionNPoints
-        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], report_tag_wise=[True])
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], report_tag_wise=[True], coordinates='relative')
 
         predictions = [[[0, 1.0, 0, 0, 1, 1],
                         [1, 1.0, 0.5, 0.5, 1, 1]],
@@ -409,8 +442,30 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
         self.assertEqual(len(report["tag_wise_AP_50"]), 3)
 
+    def test_is_crowd(self):
+        # result for tag 0 different from TestMeanAveragePrecisionNPoints
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], report_tag_wise=[True], coordinates='relative')
+
+        predictions = [[[0, 1.0, 0, 0, 1, 1], [1, 1.0, 0.5, 0.5, 1, 1]],
+                       [[2, 1.0, 0.1, 0.1, 0.5, 0.5]],
+                       [[0, 1.0, 0.9, 0.9, 1, 1], [1, 1.0, 0.5, 0.5, 1, 1]],
+                       [[2, 1.0, 0.1, 0.1, 0.5, 0.5]]]
+
+        targets = [[[0, 0, 0, 0, 1, 1], [1, 0, 0.5, 0.5, 1, 1]],
+                   [[2, 0, 0.1, 0.1, 0.5, 0.5]],
+                   [[0, 1, 0, 0, 1, 1], [1, 0, 0.5, 0.5, 1, 1]],
+                   [[2, 0, 0.1, 0.1, 0.5, 0.5]]]
+
+        evaluator.add_predictions(predictions, targets)
+
+        report = evaluator.get_report()
+
+        self.assertAlmostEqual(report["mAP_50"], 1.0, places=8)
+        self.assertTrue(isinstance(report["mAP_50"], float))
+        self.assertEqual(len(report["tag_wise_AP_50"]), 3)
+
     def test_iou_threshold(self):
-        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], coordinates='relative')
 
         predictions = [[[0, 1.0, 0.5, 0.5, 1, 1],  # IOU 0.25
                         [1, 1.0, 0.5, 0.5, 1, 1]]]
@@ -437,7 +492,7 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_20"], float))
 
     def test_no_predictions(self):
-        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], coordinates='relative')
 
         predictions = [[]]
         targets = [[[0, 0, 0, 1, 1],
@@ -450,7 +505,7 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_no_targets(self):
-        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], coordinates='relative')
 
         predictions = [[[0, 1.0, 0, 0, 1, 1],
                         [1, 1.0, 0.5, 0.5, 1, 1],
@@ -464,7 +519,7 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
 
     def test_empty_result(self):
-        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.5], coordinates='relative')
         report = evaluator.get_report()
         self.assertIn('mAP_50', report)
         self.assertEqual(report["mAP_50"], 0.0)
