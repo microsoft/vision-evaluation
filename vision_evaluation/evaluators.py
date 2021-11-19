@@ -4,6 +4,7 @@ import sklearn.metrics as sm
 import numpy as np
 from abc import ABC, abstractmethod
 
+from pycocotools.cocoeval import Params, COCOeval
 from sklearn.metrics import balanced_accuracy_score
 
 from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
@@ -522,60 +523,61 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
 
     DEFAULT_IOU_VALUES = [0.3, 0.5, 0.75, 0.9]
 
-    def __init__(self, ious=DEFAULT_IOU_VALUES, report_tag_wise=None):
-        """ Initialize evaluator by specified ious and indicators of whether to report tag-wise mAP.
+    def __init__(self, ious=DEFAULT_IOU_VALUES, report_tag_wise=None, coordinates='absolute', max_dets=300):
+        """ Initialize evaluator by specified ious and indicators of whether to report tag-wise mAP. For richer settings, please overwrite self.coco_eval_params
         Args:
             ious: list of ious.
             report_tag_wise: None or list of booleans with the same size as `ious`. True value means the
                 for the corresponding iou, mAPs of each tag will be reported.
+            coordinates: 'absolute' or 'relative'
+            max_dets: max number of boxes
         """
         super(CocoMeanAveragePrecisionEvaluator, self).__init__()
         if not report_tag_wise:
             report_tag_wise = len(ious) * [False]
         assert len(ious) == len(report_tag_wise)
-        self.ious = ious
         self.report_tag_wise = report_tag_wise
 
+        self.coco_eval_params = Params(iouType='bbox')
+        self.coco_eval_params.areaRngLbl = ['all']
+        if coordinates == 'relative':
+            self.coco_eval_params.areaRng = [[0, 1.0]]
+
+        self.coco_eval_params.maxDets = [max_dets]
+        self.coco_eval_params.iouThrs = ious
+
     def add_predictions(self, predictions, targets):
-        """ Evaluate list of image with object detection results using mscoco evaluation.
+        """ Evaluate list of image with object detection results using mscoco evaluation. Specify whether coordinates are 'absolute' or 'relative' in ctor
         Args:
             predictions: list of predictions [[[label_idx, probability, L, T, R, B], ...], [...], ...]
-            targets: list of image targets [[[label_idx, L, T, R, B], ...], ...]
+            targets: list of image targets [[[label_idx, L, T, R, B], ...], ...], or [[[label_idx, is_crowd, L, T, R, B], ...], ...]
 
         """
         self.targets += targets
         self.predictions += predictions
 
     def _coco_eval(self):
-        from pycocotools.cocoeval import COCOeval
         from .coco_wrapper import COCOWrapper
 
-        wrapper = COCOWrapper()
-        coco_ground_truths = wrapper.load_annotation(self.targets, 'gt')
-        coco_predictions = wrapper.load_annotation(self.predictions, 'prediction')
+        coco_ground_truths = COCOWrapper.convert(self.targets, 'gt')
+        coco_predictions = COCOWrapper.convert(self.predictions, 'prediction')
 
         coco_eval = COCOeval(coco_ground_truths, coco_predictions, 'bbox')
+        self.coco_eval_params.catIds = coco_eval.params.catIds
+        self.coco_eval_params.imgIds = coco_eval.params.imgIds
+        coco_eval.params = self.coco_eval_params
 
-        # only care all the boxes for now
-        coco_eval.params.areaRngLbl = ['all']
-
-        # set param for normalized coordinate
-        coco_eval.params.areaRng = [[0, 1.0]]
-
-        # max detection allow for each image is 300, could test for other settings
-        coco_eval.params.maxDets = [300]
-
-        coco_eval.params.iouThrs = self.ious
         coco_eval.evaluate()
         coco_eval.accumulate()
 
         return coco_eval
 
-    def _summarize(self, cocoresult, ap=1, iouThr=None, areaRng='all', maxDets=100, catId=None):
+    @staticmethod
+    def _summarize(eval_result, ap=1, iouThr=None, areaRng='all', maxDets=300, catId=None):
         # Adapted from https://github.com/cocodataset/cocoapi/blob/8c9bcc3cf640524c4c20a9c40e89cb6a2f2fa0e9/PythonAPI/pycocotools/cocoeval.py#L427
-        p = cocoresult.params
+        p = eval_result.params
         iouThrs = np.array(p.iouThrs)
-        # indices of categories, either all categoires or the specified catId
+        # indices of categories, either all categories or the specified catId
         cind = p.catIds if catId is None else [catId]
 
         aind = [i for i, aRng in enumerate(p.areaRngLbl) if aRng == areaRng]
@@ -583,7 +585,7 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
 
         if ap == 1:
             # dimension of precision: [TxRxKxAxM]
-            s = cocoresult.eval['precision']
+            s = eval_result.eval['precision']
             # IoU
             if iouThr is not None:
                 t = np.where(iouThr == iouThrs)[0]
@@ -591,7 +593,7 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
             s = s[:, :, cind, aind, mind]
         else:
             # dimension of recall: [TxKxAxM]
-            s = cocoresult.eval['recall']
+            s = eval_result.eval['recall']
             if iouThr is not None:
                 t = np.where(iouThr == iouThrs)[0]
                 s = s[t]
@@ -603,17 +605,16 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
         return mean_s
 
     def get_report(self, **kwargs):
-        cocoresult = self._coco_eval()
-        report = {'avg_mAP': self._summarize(cocoresult, 1, maxDets=cocoresult.params.maxDets[-1])}
+        coco_eval_result = self._coco_eval()
+        report = {'avg_mAP': self._summarize(coco_eval_result, 1, maxDets=coco_eval_result.params.maxDets[-1])}
         # mAP for each iou
-        report.update(
-            {f'mAP_{int(iou * 100)}': self._summarize(cocoresult, 1, iou, maxDets=cocoresult.params.maxDets[-1])
-            for iou in self.ious}
-        )
+        report.update({f'mAP_{int(iou * 100)}': self._summarize(coco_eval_result, 1, iou, maxDets=coco_eval_result.params.maxDets[-1]) for iou in coco_eval_result.params.iouThrs})
+
         # tag-wise mAP
-        for iou, iou_report_tag_wise in zip(self.ious, self.report_tag_wise):
+        for iou, iou_report_tag_wise in zip(coco_eval_result.params.iouThrs, self.report_tag_wise):
             if iou_report_tag_wise:
-                report[f'tag_wise_AP_{int(iou * 100)}'] = [self._summarize(cocoresult, 1, iou, maxDets=cocoresult.params.maxDets[-1], catId=cat_id) for cat_id in cocoresult.params.catIds]
+                report[f'tag_wise_AP_{int(iou * 100)}'] = [self._summarize(coco_eval_result, 1, iou, maxDets=coco_eval_result.params.maxDets[-1], catId=cat_id) for cat_id in
+                                                           coco_eval_result.params.catIds]
 
         return report
 
