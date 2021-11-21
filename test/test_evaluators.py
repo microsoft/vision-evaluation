@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
-from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator
+import json
+from vision_evaluation.evaluators import AveragePrecisionEvaluator, Evaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
+    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, ImageCaptionEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -86,7 +87,7 @@ class TestClassificationEvaluator(unittest.TestCase):
         self.assertAlmostEqual(result['tag_wise_average_precision'][1], 0.40208, 5)
 
         # multilabel with only one class, but without negative tags, precision is meaningless
-        targets_single_cls = np.array([[1],[1],[1]])
+        targets_single_cls = np.array([[1], [1], [1]])
         predictions_single_cls = np.array([[0], [0], [1]])
         evaluator_single_cls = TagWiseAveragePrecisionEvaluator()
         evaluator_single_cls.add_predictions(predictions_single_cls, targets_single_cls)
@@ -287,3 +288,33 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         self.assertIn('mAP_50', report)
         self.assertEqual(report["mAP_50"], 0.0)
         self.assertTrue(isinstance(report["mAP_50"], float))
+
+
+class TestImageCaptionEvaluator(unittest.TestCase):
+    def assertImageCaptionMetricsEqual(self, report):
+        self.assertEqual(report["Bleu_1"], 0.783228681385441)
+        self.assertEqual(report["Bleu_2"], 0.6226378540059051)
+        self.assertEqual(report["Bleu_3"], 0.47542636331846966)
+        self.assertEqual(report["Bleu_4"], 0.3573567238999926)
+        self.assertEqual(report["METEOR"], 0.2878681068021112)
+        self.assertEqual(report["ROUGE_L"], 0.5774238052522583)
+        self.assertEqual(report["CIDEr"], 1.2346054374217474)
+        self.assertEqual(report["SPICE"], 0.2226814382948703)
+
+    def test_image_caption_evaluator_from_files(self):
+        predictions_file = './test/image_caption_prediction.json'
+        ground_truth_file = './test/image_caption_gt.json'
+        evaluator = ImageCaptionEvaluator()
+        evaluator.add_predictions(predictions=predictions_file, targets=ground_truth_file)
+        report = evaluator.get_report()
+        self.assertImageCaptionMetricsEqual(report)
+
+    def test_image_caption_evaluator_from_variables(self):
+        predictions_file = './test/image_caption_prediction.json'
+        ground_truth_file = './test/image_caption_gt.json'
+        predictions = json.load(open(predictions_file, 'r'))
+        targets = json.load(open(ground_truth_file, 'r'))
+        evaluator = ImageCaptionEvaluator()
+        evaluator.add_predictions(predictions=predictions, targets=targets)
+        report = evaluator.get_report()
+        self.assertImageCaptionMetricsEqual(report)
