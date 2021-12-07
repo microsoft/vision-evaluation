@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import json
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
@@ -308,8 +309,7 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 class TestMeanAveragePrecisionNPoints(unittest.TestCase):
     TARGETS = np.array([[1, 0], [0, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1], [1, 0]])
     PREDICTIONS = np.array([[1, 0],
@@ -528,9 +528,8 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
         self.assertIn('mAP_50', report)
         self.assertEqual(report["mAP_50"], 0.0)
         self.assertTrue(isinstance(report["mAP_50"], float))
-=======
-=======
->>>>>>> d2f683eac8897648d4b45da1a240a43619964e7a
+
+
 class TestImageCaptionEvaluator(unittest.TestCase):
     def assertImageCaptionMetricsEqual(self, report):
         self.assertEqual(report["Bleu_1"], 0.783228681385441)
@@ -558,9 +557,5 @@ class TestImageCaptionEvaluator(unittest.TestCase):
         evaluator = ImageCaptionEvaluator()
         evaluator.add_predictions(predictions=predictions, targets=targets)
         report = evaluator.get_report()
-<<<<<<< HEAD
         self.assertImageCaptionMetricsEqual(report)
->>>>>>> adding pytest, etc
-=======
         self.assertImageCaptionMetricsEqual(report)
->>>>>>> d2f683eac8897648d4b45da1a240a43619964e7a
