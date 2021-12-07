@@ -1,20 +1,10 @@
 import unittest
 import numpy as np
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
-    CocoMeanAveragePrecisionEvaluator
-=======
-import json
-from vision_evaluation.evaluators import AveragePrecisionEvaluator, Evaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, ImageCaptionEvaluator
->>>>>>> adding pytest, etc
-=======
-import json
-from vision_evaluation.evaluators import AveragePrecisionEvaluator, Evaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, ImageCaptionEvaluator
->>>>>>> d2f683eac8897648d4b45da1a240a43619964e7a
+    CocoMeanAveragePrecisionEvaluator, ImageCaptionEvaluator
+
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
