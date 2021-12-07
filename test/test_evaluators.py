@@ -1,10 +1,9 @@
 import unittest
 import numpy as np
-import json
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
-    CocoMeanAveragePrecisionEvaluator, ImageCaptionEvaluator
+    CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator
 
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
@@ -309,7 +308,6 @@ class TestMeanAveragePrecisionEvaluatorForSingleIOU(unittest.TestCase):
         self.assertTrue(isinstance(report["mAP_50"], float))
 
 
-
 class TestMeanAveragePrecisionNPoints(unittest.TestCase):
     TARGETS = np.array([[1, 0], [0, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1], [1, 0]])
     PREDICTIONS = np.array([[1, 0],
@@ -531,22 +529,38 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
 
 
 class TestImageCaptionEvaluator(unittest.TestCase):
-    def assertImageCaptionMetricsEqual(self, report):
+    predictions_file = './test/image_caption_prediction.json'
+    ground_truth_file = './test/image_caption_gt.json'
+
+    def test_image_caption_blue_score_evaluator(self):
+        evaluator = BleuScoreEvaluator()
+        evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
+        report = evaluator.get_report()
         self.assertEqual(report["Bleu_1"], 0.783228681385441)
         self.assertEqual(report["Bleu_2"], 0.6226378540059051)
         self.assertEqual(report["Bleu_3"], 0.47542636331846966)
         self.assertEqual(report["Bleu_4"], 0.3573567238999926)
-        self.assertEqual(report["METEOR"], 0.2878681068021112)
-        self.assertEqual(report["ROUGE_L"], 0.5774238052522583)
-        self.assertEqual(report["CIDEr"], 1.2346054374217474)
-        self.assertEqual(report["SPICE"], 0.2226814382948703)
 
-    def test_image_caption_evaluator_from_files(self):
-        predictions_file = './test/image_caption_prediction.json'
-        ground_truth_file = './test/image_caption_gt.json'
-        evaluator = ImageCaptionEvaluator()
-        evaluator.add_predictions(predictions=predictions_file, targets=ground_truth_file)
+    def test_image_caption_meteor_score_evaluator(self):
+        evaluator = METEORScoreEvaluator()
+        evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
         report = evaluator.get_report()
-        self.assertImageCaptionMetricsEqual(report)
+        self.assertEqual(report["METEOR"], 0.2878681068021112)
 
+    def test_image_caption_rouge_l_score_evaluator(self):
+        evaluator = ROUGELScoreEvaluator()
+        evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
+        report = evaluator.get_report()
+        self.assertEqual(report["ROUGE_L"], 0.5774238052522583)
 
+    def test_image_caption_cider_score_evaluator(self):
+        evaluator = CIDErScoreEvaluator()
+        evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
+        report = evaluator.get_report()
+        self.assertEqual(report["CIDEr"], 1.2346054374217474)
+
+    def test_image_caption_spice_score_evaluator(self):
+        evaluator = SPICEScoreEvaluator()
+        evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
+        report = evaluator.get_report()
+        self.assertEqual(report["SPICE"], 0.2226814382948703)

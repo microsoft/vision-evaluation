@@ -16,14 +16,14 @@ This repo currently offers evaluation metrics for three vision tasks:
     - `CocoMeanAveragePrecisionEvaluator`: Coco mean average precision (mAP) computation across different classes, under multiple [IoU(s)](https://en.wikipedia.org/wiki/Jaccard_index).
     - `MeanAveragePrecisionEvaluatorForSingleIOU`, `evaluators.MeanAveragePrecisionEvaluatorForMultipleIOUs`: computes the mean average precision (mAP), i.e. mean average precision across different classes, under single or multiple [IoU(s)](https://en.wikipedia.org/wiki/Jaccard_index).
 - **Image caption**:
-    - `BLEU`: computes the Blue score. For more details, refer to [BLEU: a Method for Automatic Evaluation of Machine Translation](http://www.aclweb.org/anthology/P02-1040.pdf).
-    - `Meteor`: computes the Meteor score. For more details, refer to [Project page](http://www.cs.cmu.edu/~alavie/METEOR/). We use the latest version (1.5) of the [Code](https://github.com/mjdenkowski/meteor).
-    - `Rouge-L`: computes the Rouge-L score. Refer to [ROUGE: A Package for Automatic Evaluation of Summaries](http://anthology.aclweb.org/W/W04/W04-1013.pdf) for more details.
-    - `CIDEr`:  computes the CIDEr score. Refer to [CIDEr: Consensus-based Image Description Evaluation](http://arxiv.org/pdf/1411.5726.pdf) for more details.
-    - `SPICE`:  computes the SPICE score. Refer to [SPICE: Semantic Propositional Image Caption Evaluation](https://arxiv.org/abs/1607.08822) for more details.
+    - `BleuScoreEvaluator`: computes the Blue score. For more details, refer to [BLEU: a Method for Automatic Evaluation of Machine Translation](http://www.aclweb.org/anthology/P02-1040.pdf).
+    - `METEORScoreEvaluator`: computes the Meteor score. For more details, refer to [Project page](http://www.cs.cmu.edu/~alavie/METEOR/). We use the latest version (1.5) of the [Code](https://github.com/mjdenkowski/meteor).
+    - `ROUGELScoreEvaluator`: computes the Rouge-L score. Refer to [ROUGE: A Package for Automatic Evaluation of Summaries](http://anthology.aclweb.org/W/W04/W04-1013.pdf) for more details.
+    - `CIDErScoreEvaluator`:  computes the CIDEr score. Refer to [CIDEr: Consensus-based Image Description Evaluation](http://arxiv.org/pdf/1411.5726.pdf) for more details.
+    - `SPICEScoreEvaluator`:  computes the SPICE score. Refer to [SPICE: Semantic Propositional Image Caption Evaluation](https://arxiv.org/abs/1607.08822) for more details.
 
 While different machine learning problems/applications prefer different metrics, below are some general recommendations:
 - **Multiclass classification**: Top-1 accuracy and Top-5 accuracy
 - **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
 - **Object detection**: mAP@IoU=30 and mAP@IoU=50
-- **Image caption**: BLEU, Meteor, Rouge-L, CIDEr, SPICE
+- **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
