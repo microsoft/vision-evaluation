@@ -1,7 +1,7 @@
 import setuptools
 from os import path
 
-VERSION = '0.1.6'
+VERSION = '0.2.1'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -31,4 +31,5 @@ setuptools.setup(name='vision-evaluation',
                  install_requires=[
                      'numpy',
                      'sklearn',
+                     'pycocotools'
                  ])
