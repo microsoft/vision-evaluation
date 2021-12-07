@@ -9,6 +9,8 @@ from sklearn.metrics import balanced_accuracy_score
 
 from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 from functools import reduce
+from .pycocotools.coco import COCO
+from .pycocoevalcap.eval import COCOEvalCap
 
 
 def _targets_to_mat(targets, n_class):
@@ -675,3 +677,26 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
 
     def _get_id(self):
         return f'mAP_{self.n_points}_points'
+
+        
+class ImageCaptionEvaluator(Evaluator):
+    """Evaluate on the image caption predictions.
+    Image 
+    """
+    def __init__(self):
+        super(ImageCaptionEvaluator, self).__init__()
+
+    def add_predictions(self, predictions, targets):
+        self.predictions = predictions
+        self.targets = targets
+
+    def get_report(self, **kwargs):
+        coco = COCO(self.targets)
+        cocoRes = coco.loadRes(self.predictions)
+        cocoEval = COCOEvalCap(coco, cocoRes, 'corpus')
+        cocoEval.params['image_id'] = cocoRes.getImgIds()
+        # evaluate results
+        # SPICE will take a few minutes the first time, but speeds up due to caching
+        cocoEval.evaluate()
+        result = cocoEval.eval
+        return result
