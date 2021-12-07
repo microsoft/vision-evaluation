@@ -677,141 +677,82 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
         return f'mAP_{self.n_points}_points'
 
 
-class BleuScoreEvaluator(Evaluator):
+class ImageCaptionEvaluatorBase(Evaluator):
+    def __init__(self, metric):
+        super(ImageCaptionEvaluatorBase, self).__init__()
+        self.predictions = []
+        self.targets = []
+        self.metric = metric
+
+    def add_predictions(self, predictions, targets):
+        self.predictions = predictions
+        self.targets = targets
+
+    def reset(self):
+        self.predictions = []
+        self.targets = []
+
+    def get_report(self, **kwargs):
+        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
+        coco = ImageCaptionCOCO(self.targets)
+        cocoRes = coco.loadRes(self.predictions)
+        cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, self.metric)
+        cocoEval.params['image_id'] = cocoRes.getImgIds()
+        cocoEval.evaluate()
+        result = cocoEval.eval
+        return result
+
+
+class BleuScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     BLEU score evaluator for image caption task. For more details, refer to http://www.aclweb.org/anthology/P02-1040.pdf.
     """
     def __init__(self):
-        super(Evaluator, self).__init__()
+        super().__init__(metric='Bleu')
         self.predictions = []
         self.targets = []
-
-    def add_predictions(self, predictions, targets):
-        self.predictions = predictions
-        self.targets = targets
-
-    def reset(self):
-        self.predictions = []
-        self.targets = []
-
-    def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
-        coco = ImageCaptionCOCO(self.targets)
-        cocoRes = coco.loadRes(self.predictions)
-        cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "Bleu")
-        cocoEval.params['image_id'] = cocoRes.getImgIds()
-        cocoEval.evaluate()
-        result = cocoEval.eval
-        return result
+        self.metric = 'Bleu'
 
 
-class METEORScoreEvaluator(Evaluator):
+class METEORScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     METEOR score evaluator for image caption task. For more details, refer to http://www.cs.cmu.edu/~alavie/METEOR/.
     """
     def __init__(self):
-        super(Evaluator, self).__init__()
+        super().__init__(metric='METEOR')
         self.predictions = []
         self.targets = []
-
-    def add_predictions(self, predictions, targets):
-        self.predictions = predictions
-        self.targets = targets
-
-    def reset(self):
-        self.predictions = []
-        self.targets = []
-
-    def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
-        coco = ImageCaptionCOCO(self.targets)
-        cocoRes = coco.loadRes(self.predictions)
-        cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "METEOR")
-        cocoEval.params['image_id'] = cocoRes.getImgIds()
-        cocoEval.evaluate()
-        result = cocoEval.eval
-        return result
+        self.metric = 'METEOR'
 
 
-class ROUGELScoreEvaluator(Evaluator):
+class ROUGELScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     ROUGE_L score evaluator for image caption task. For more details, refer to http://anthology.aclweb.org/W/W04/W04-1013.pdf
     """
     def __init__(self):
-        super(Evaluator, self).__init__()
+        super().__init__(metric='ROUGE_L')
         self.predictions = []
         self.targets = []
-
-    def add_predictions(self, predictions, targets):
-        self.predictions = predictions
-        self.targets = targets
-
-    def reset(self):
-        self.predictions = []
-        self.targets = []
-
-    def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
-        coco = ImageCaptionCOCO(self.targets)
-        cocoRes = coco.loadRes(self.predictions)
-        cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "ROUGE_L")
-        cocoEval.params['image_id'] = cocoRes.getImgIds()
-        cocoEval.evaluate()
-        result = cocoEval.eval
-        return result
+        self.metric = 'ROUGE_L'
 
 
-class CIDErScoreEvaluator(Evaluator):
+class CIDErScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     CIDEr score evaluator for image caption task. For more details, refer to http://arxiv.org/pdf/1411.5726.pdf.
     """
     def __init__(self):
-        super(Evaluator, self).__init__()
+        super().__init__(metric='CIDEr')
         self.predictions = []
         self.targets = []
-
-    def add_predictions(self, predictions, targets):
-        self.predictions = predictions
-        self.targets = targets
-
-    def reset(self):
-        self.predictions = []
-        self.targets = []
-
-    def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
-        coco = ImageCaptionCOCO(self.targets)
-        cocoRes = coco.loadRes(self.predictions)
-        cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "CIDEr")
-        cocoEval.params['image_id'] = cocoRes.getImgIds()
-        cocoEval.evaluate()
-        result = cocoEval.eval
-        return result
+        self.metric = 'CIDEr'
 
 
-class SPICEScoreEvaluator(Evaluator):
+class SPICEScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     SPICE score evaluator for image caption task. For more details, refer to https://arxiv.org/abs/1607.08822.
     """
     def __init__(self):
-        super(Evaluator, self).__init__()
+        super().__init__(metric='SPICE')
         self.predictions = []
         self.targets = []
-
-    def add_predictions(self, predictions, targets):
-        self.predictions = predictions
-        self.targets = targets
-
-    def reset(self):
-        self.predictions = []
-        self.targets = []
-
-    def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
-        coco = ImageCaptionCOCO(self.targets)
-        cocoRes = coco.loadRes(self.predictions)
-        cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "SPICE")
-        cocoEval.params['image_id'] = cocoRes.getImgIds()
-        cocoEval.evaluate()
-        result = cocoEval.eval
-        return result
+        self.metric = 'SPICE'
