@@ -9,8 +9,8 @@ from sklearn.metrics import balanced_accuracy_score
 
 from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 from functools import reduce
-from .pycocotools.coco import COCO
-from .pycocoevalcap.eval import COCOEvalCap
+from pycocotools.coco import COCO
+from pycocoevalcap.eval import COCOEvalCap
 
 
 def _targets_to_mat(targets, n_class):
@@ -693,7 +693,7 @@ class ImageCaptionEvaluator(Evaluator):
     def get_report(self, **kwargs):
         coco = COCO(self.targets)
         cocoRes = coco.loadRes(self.predictions)
-        cocoEval = COCOEvalCap(coco, cocoRes, 'corpus')
+        cocoEval = COCOEvalCap(coco, cocoRes)
         cocoEval.params['image_id'] = cocoRes.getImgIds()
         # evaluate results
         # SPICE will take a few minutes the first time, but speeds up due to caching

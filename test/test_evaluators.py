@@ -549,13 +549,4 @@ class TestImageCaptionEvaluator(unittest.TestCase):
         report = evaluator.get_report()
         self.assertImageCaptionMetricsEqual(report)
 
-    def test_image_caption_evaluator_from_variables(self):
-        predictions_file = './test/image_caption_prediction.json'
-        ground_truth_file = './test/image_caption_gt.json'
-        predictions = json.load(open(predictions_file, 'r'))
-        targets = json.load(open(ground_truth_file, 'r'))
-        evaluator = ImageCaptionEvaluator()
-        evaluator.add_predictions(predictions=predictions, targets=targets)
-        report = evaluator.get_report()
-        self.assertImageCaptionMetricsEqual(report)
-        self.assertImageCaptionMetricsEqual(report)
+
