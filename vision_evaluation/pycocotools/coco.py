@@ -262,10 +262,17 @@ class COCO:
             for ann in anns:
                 print(ann['caption'])
 
+<<<<<<< HEAD
     def loadRes(self, result):
         """
         Load result file and return a result api object.
         :param   result           : result in json format or file name of result json file
+=======
+    def loadRes(self, resFile):
+        """
+        Load result file and return a result api object.
+        :param   resFile (str)     : file name of result file
+>>>>>>> adding pycocotools
         :return: res (obj)         : result api object
         """
         res = COCO()
@@ -276,10 +283,14 @@ class COCO:
 
         print('Loading and preparing results...     ')
         time_t = datetime.datetime.utcnow()
+<<<<<<< HEAD
         if isinstance(result, str):
             anns = json.load(open(result))
         else:
             anns = result
+=======
+        anns = json.load(open(resFile))
+>>>>>>> adding pycocotools
         assert type(anns) == list, 'results in not an array of objects'
         annsImgIds = [ann['image_id'] for ann in anns]
         assert set(annsImgIds) == (set(annsImgIds) & set(self.getImgIds())), \
