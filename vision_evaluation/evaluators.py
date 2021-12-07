@@ -5,7 +5,6 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 from pycocotools.cocoeval import Params, COCOeval
-from pycocotools.coco import COCO
 from sklearn.metrics import balanced_accuracy_score
 
 from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
@@ -696,8 +695,8 @@ class BleuScoreEvaluator(Evaluator):
         self.targets = []
 
     def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption
-        coco = COCO(self.targets)
+        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
+        coco = ImageCaptionCOCO(self.targets)
         cocoRes = coco.loadRes(self.predictions)
         cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "Bleu")
         cocoEval.params['image_id'] = cocoRes.getImgIds()
@@ -724,8 +723,8 @@ class METEORScoreEvaluator(Evaluator):
         self.targets = []
 
     def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption
-        coco = COCO(self.targets)
+        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
+        coco = ImageCaptionCOCO(self.targets)
         cocoRes = coco.loadRes(self.predictions)
         cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "METEOR")
         cocoEval.params['image_id'] = cocoRes.getImgIds()
@@ -752,8 +751,8 @@ class ROUGELScoreEvaluator(Evaluator):
         self.targets = []
 
     def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption
-        coco = COCO(self.targets)
+        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
+        coco = ImageCaptionCOCO(self.targets)
         cocoRes = coco.loadRes(self.predictions)
         cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "ROUGE_L")
         cocoEval.params['image_id'] = cocoRes.getImgIds()
@@ -780,8 +779,8 @@ class CIDErScoreEvaluator(Evaluator):
         self.targets = []
 
     def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption
-        coco = COCO(self.targets)
+        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
+        coco = ImageCaptionCOCO(self.targets)
         cocoRes = coco.loadRes(self.predictions)
         cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "CIDEr")
         cocoEval.params['image_id'] = cocoRes.getImgIds()
@@ -808,8 +807,8 @@ class SPICEScoreEvaluator(Evaluator):
         self.targets = []
 
     def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption
-        coco = COCO(self.targets)
+        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
+        coco = ImageCaptionCOCO(self.targets)
         cocoRes = coco.loadRes(self.predictions)
         cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, "SPICE")
         cocoEval.params['image_id'] = cocoRes.getImgIds()

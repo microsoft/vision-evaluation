@@ -1,10 +1,30 @@
+import json
+from collections import defaultdict
+
 from pycocoevalcap.eval import COCOEvalCap
+from pycocotools.coco import COCO
 from pycocoevalcap.tokenizer.ptbtokenizer import PTBTokenizer
 from pycocoevalcap.bleu.bleu import Bleu
 from pycocoevalcap.meteor.meteor import Meteor
 from pycocoevalcap.rouge.rouge import Rouge
 from pycocoevalcap.cider.cider import Cider
 from pycocoevalcap.spice.spice import Spice
+
+
+class ImageCaptionCOCO(COCO):
+    def __init__(self, data_or_file=None):
+        super().__init__()
+        self.dataset, self.anns, self.cats, self.imgs = dict(), dict(), dict(), dict()
+        self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
+        if data_or_file is not None:
+            try:
+                with open(data_or_file, 'r') as f:
+                    dataset = json.load(f)
+            except Exception:
+                dataset = data_or_file
+            assert type(dataset) == dict, 'annotation file format {} not supported'.format(type(dataset))
+            self.dataset = dataset
+            self.createIndex()
 
 
 class ImageCaptionCOCOEvalCaption(COCOEvalCap):
