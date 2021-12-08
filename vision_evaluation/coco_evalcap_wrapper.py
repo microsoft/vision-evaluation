@@ -15,7 +15,7 @@ class ImageCaptionCOCO(COCO):
     def __init__(self, data_or_file=None):
         """
         Args:
-            data_or_file: a dictionary data or a path to the json file containing the dictionary data 
+            data_or_file: a dictionary data or a path to the json file containing the dictionary data
         """
         super().__init__()
         self.dataset, self.anns, self.cats, self.imgs = dict(), dict(), dict(), dict()

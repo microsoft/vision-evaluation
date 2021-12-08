@@ -1,5 +1,7 @@
 import unittest
 import numpy as np
+import pathlib
+import os
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
@@ -529,8 +531,8 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
 
 
 class TestImageCaptionEvaluator(unittest.TestCase):
-    predictions_file = './test/image_caption_prediction.json'
-    ground_truth_file = './test/image_caption_gt.json'
+    predictions_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'image_caption_prediction.json')
+    ground_truth_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'image_caption_gt.json')
 
     def test_image_caption_blue_score_evaluator(self):
         evaluator = BleuScoreEvaluator()
