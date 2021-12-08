@@ -536,31 +536,31 @@ class TestImageCaptionEvaluator(unittest.TestCase):
         evaluator = BleuScoreEvaluator()
         evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
         report = evaluator.get_report()
-        self.assertEqual(report["Bleu_1"], 0.783228681385441)
-        self.assertEqual(report["Bleu_2"], 0.6226378540059051)
-        self.assertEqual(report["Bleu_3"], 0.47542636331846966)
-        self.assertEqual(report["Bleu_4"], 0.3573567238999926)
+        self.assertAlmostEqual(report["Bleu_1"], 0.783228681385441)
+        self.assertAlmostEqual(report["Bleu_2"], 0.6226378540059051)
+        self.assertAlmostEqual(report["Bleu_3"], 0.47542636331846966)
+        self.assertAlmostEqual(report["Bleu_4"], 0.3573567238999926)
 
     def test_image_caption_meteor_score_evaluator(self):
         evaluator = METEORScoreEvaluator()
         evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
         report = evaluator.get_report()
-        self.assertEqual(report["METEOR"], 0.2878681068021112)
+        self.assertAlmostEqual(report["METEOR"], 0.2878681068021112)
 
     def test_image_caption_rouge_l_score_evaluator(self):
         evaluator = ROUGELScoreEvaluator()
         evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
         report = evaluator.get_report()
-        self.assertEqual(report["ROUGE_L"], 0.5774238052522583)
+        self.assertAlmostEqual(report["ROUGE_L"], 0.5774238052522583)
 
     def test_image_caption_cider_score_evaluator(self):
         evaluator = CIDErScoreEvaluator()
         evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
         report = evaluator.get_report()
-        self.assertEqual(report["CIDEr"], 1.2346054374217474)
+        self.assertAlmostEqual(report["CIDEr"], 1.2346054374217474)
 
     def test_image_caption_spice_score_evaluator(self):
         evaluator = SPICEScoreEvaluator()
         evaluator.add_predictions(predictions=self.predictions_file, targets=self.ground_truth_file)
         report = evaluator.get_report()
-        self.assertEqual(report["SPICE"], 0.2226814382948703)
+        self.assertAlmostEqual(report["SPICE"], 0.2226814382948703)

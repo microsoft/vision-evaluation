@@ -1,4 +1,4 @@
-# Introduction 
+# Introduction
 This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, and image caption.
 
 # Functionalities
@@ -16,7 +16,7 @@ This repo currently offers evaluation metrics for three vision tasks:
     - `CocoMeanAveragePrecisionEvaluator`: Coco mean average precision (mAP) computation across different classes, under multiple [IoU(s)](https://en.wikipedia.org/wiki/Jaccard_index).
     - `MeanAveragePrecisionEvaluatorForSingleIOU`, `evaluators.MeanAveragePrecisionEvaluatorForMultipleIOUs`: computes the mean average precision (mAP), i.e. mean average precision across different classes, under single or multiple [IoU(s)](https://en.wikipedia.org/wiki/Jaccard_index).
 - **Image caption**:
-    - `BleuScoreEvaluator`: computes the Blue score. For more details, refer to [BLEU: a Method for Automatic Evaluation of Machine Translation](http://www.aclweb.org/anthology/P02-1040.pdf).
+    - `BleuScoreEvaluator`: computes the Bleu score. For more details, refer to [BLEU: a Method for Automatic Evaluation of Machine Translation](http://www.aclweb.org/anthology/P02-1040.pdf).
     - `METEORScoreEvaluator`: computes the Meteor score. For more details, refer to [Project page](http://www.cs.cmu.edu/~alavie/METEOR/). We use the latest version (1.5) of the [Code](https://github.com/mjdenkowski/meteor).
     - `ROUGELScoreEvaluator`: computes the Rouge-L score. Refer to [ROUGE: A Package for Automatic Evaluation of Summaries](http://anthology.aclweb.org/W/W04/W04-1013.pdf) for more details.
     - `CIDErScoreEvaluator`:  computes the CIDEr score. Refer to [CIDEr: Consensus-based Image Description Evaluation](http://arxiv.org/pdf/1411.5726.pdf) for more details.
