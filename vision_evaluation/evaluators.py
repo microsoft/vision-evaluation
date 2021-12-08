@@ -693,10 +693,10 @@ class ImageCaptionEvaluatorBase(Evaluator):
         self.targets = []
 
     def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEvalCaption, ImageCaptionCOCO
+        from .coco_evalcap_wrapper import ImageCaptionCOCOEval, ImageCaptionCOCO
         coco = ImageCaptionCOCO(self.targets)
         cocoRes = coco.loadRes(self.predictions)
-        cocoEval = ImageCaptionCOCOEvalCaption(coco, cocoRes, self.metric)
+        cocoEval = ImageCaptionCOCOEval(coco, cocoRes, self.metric)
         cocoEval.params['image_id'] = cocoRes.getImgIds()
         cocoEval.evaluate()
         result = cocoEval.eval

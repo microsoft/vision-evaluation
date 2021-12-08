@@ -24,14 +24,14 @@ class ImageCaptionCOCO(COCO):
             try:
                 with open(data_or_file, 'r') as f:
                     dataset = json.load(f)
-            except Exception:
+            except TypeError:
                 dataset = data_or_file
-            assert type(dataset) == dict, f'annotation file format {type(dataset)} not supported.'
+                assert type(dataset) == dict, f'annotation file format {type(dataset)} not supported.'
             self.dataset = dataset
             self.createIndex()
 
 
-class ImageCaptionCOCOEvalCaption(COCOEvalCap):
+class ImageCaptionCOCOEval(COCOEvalCap):
     """
     Evaluate on the image caption predictions using pycocoevalcap.
     """
@@ -49,7 +49,7 @@ class ImageCaptionCOCOEvalCaption(COCOEvalCap):
         elif metric == "SPICE":
             self.scores = [(Spice(), "SPICE")]
         else:
-            raise Exception('Not supported image caption metric. Supported metric list: [Bleu, METEOR, ROUGE_L, CIDEr, SPICE]')
+            raise Exception(f'Not supported image caption metric: {metric}. Supported metric list: [Bleu, METEOR, ROUGE_L, CIDEr, SPICE]')
 
     def reset(self):
         self.scores = []
