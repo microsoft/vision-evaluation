@@ -13,16 +13,20 @@ from pycocoevalcap.spice.spice import Spice
 
 class ImageCaptionCOCO(COCO):
     def __init__(self, data_or_file=None):
+        """
+        Args:
+            data_or_file: a dictionary data or a path to the json file containing the dictionary data 
+        """
         super().__init__()
         self.dataset, self.anns, self.cats, self.imgs = dict(), dict(), dict(), dict()
         self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
-        if data_or_file is not None:
+        if data_or_file:
             try:
                 with open(data_or_file, 'r') as f:
                     dataset = json.load(f)
             except Exception:
                 dataset = data_or_file
-            assert type(dataset) == dict, 'annotation file format {} not supported'.format(type(dataset))
+            assert type(dataset) == dict, f'annotation file format {type(dataset)} not supported.'
             self.dataset = dataset
             self.createIndex()
 
