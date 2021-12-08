@@ -21,12 +21,11 @@ class ImageCaptionCOCO(COCO):
         self.dataset, self.anns, self.cats, self.imgs = dict(), dict(), dict(), dict()
         self.imgToAnns, self.catToImgs = defaultdict(list), defaultdict(list)
         if data_or_file:
-            try:
+            if isinstance(data_or_file, dict):
+                dataset = data_or_file
+            else:
                 with open(data_or_file, 'r') as f:
                     dataset = json.load(f)
-            except TypeError:
-                dataset = data_or_file
-                assert type(dataset) == dict, f'annotation file format {type(dataset)} not supported.'
             self.dataset = dataset
             self.createIndex()
 
@@ -70,7 +69,7 @@ class ImageCaptionCOCOEval(COCOEvalCap):
         # Compute scores
         for scorer, method in scorers:
             score, scores = scorer.compute_score(gts, res)
-            if type(method) == list:
+            if isinstance(method, list):
                 for sc, scs, m in zip(score, scores, method):
                     self.setEval(sc, m)
                     self.setImgToEvalImgs(scs, gts.keys(), m)
