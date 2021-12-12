@@ -534,15 +534,19 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
 class TestImageCaptionEvaluator(unittest.TestCase):
     predictions_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'image_caption_prediction.json')
     ground_truth_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'image_caption_gt.json')
-    predictions_dict = json.load(open(predictions_file))
-    ground_truth_dict = json.load(open(ground_truth_file))
-    predictions_by_id = {pred['image_id']: pred['caption'] for pred in predictions_dict}
+    imcap_predictions, imcap_targets = [], []
+    with open(predictions_file, 'r') as f:
+        predictions_dict = json.load(f)
+    with open(ground_truth_file, 'r') as f:
+        ground_truth_dict = json.load(f)
+
     gts_by_id = {}
+    predictions_by_id = {pred['image_id']: pred['caption'] for pred in predictions_dict}
+
     for gt in ground_truth_dict['annotations']:
         if not gt['image_id'] in gts_by_id:
             gts_by_id[gt['image_id']] = []
         gts_by_id[gt['image_id']].append(gt['caption'])
-    imcap_predictions, imcap_targets = [], []
     for key, value in predictions_by_id.items():
         imcap_predictions.append(value)
         imcap_targets.append(gts_by_id[key])
