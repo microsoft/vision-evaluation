@@ -693,12 +693,11 @@ class ImageCaptionEvaluatorBase(Evaluator):
         """
         self.targets += targets
         self.predictions += predictions
-        
+
     def reset(self):
         super(ImageCaptionEvaluatorBase, self).reset()
         self.targets = []
         self.predictions = []
-
 
     def get_report(self, **kwargs):
         from .coco_evalcap_utils import ImageCaptionCOCOEval, ImageCaptionCOCO, ImageCaptionWrapper
