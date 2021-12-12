@@ -77,3 +77,34 @@ class ImageCaptionCOCOEval(COCOEvalCap):
                 self.setEval(score, method)
                 self.setImgToEvalImgs(scores, gts.keys(), method)
         self.setEvalImgs()
+
+
+class ImageCaptionWrapper:
+    """
+    Convert the data to pycocoevalcap format in order to use pycocoevalcap
+    """
+    @staticmethod
+    def convert(imcap_predictions, imcap_targets):
+        predictions = []
+        gts = {'annotations': [], 'images': []}
+        pred_id = 1
+        for index, pred in enumerate(imcap_predictions):
+            pred_dict = {}
+            pred_dict['image_id'] = index
+            pred_dict['caption'] = pred
+            predictions.append(pred_dict)
+
+            image_dict = {}
+            image_dict['id'] = index
+            image_dict['file_name'] = f'tmp_file_name_{index}'
+            gts['images'].append(image_dict)
+
+            for gt in imcap_targets[index]:
+                caption_dict = {}
+                caption_dict['image_id'] = index
+                caption_dict['caption'] = gt
+                caption_dict['id'] = pred_id
+                gts['annotations'].append(caption_dict)
+                pred_id += 1
+
+        return predictions, gts

@@ -678,24 +678,33 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
 
 
 class ImageCaptionEvaluatorBase(Evaluator):
+    """
+    Average of recall obtained on each class, for multiclass classifiation problem
+    """
     def __init__(self, metric):
         super(ImageCaptionEvaluatorBase, self).__init__()
-        self.predictions = []
-        self.targets = []
         self.metric = metric
 
     def add_predictions(self, predictions, targets):
-        self.predictions = predictions
-        self.targets = targets
-
+        """ Evaluate list of image with image caption results using pycocoimcap tools.
+        Args:
+            predictions: list of predictions [caption1, caption2, ...], shape: (N, )
+            targets: list of image caption ground truth: [[gt1, gt2, ...], [gt1, gt2, ...], ...]
+        """
+        self.targets += targets
+        self.predictions += predictions
+        
     def reset(self):
-        self.predictions = []
+        super(ImageCaptionEvaluatorBase, self).reset()
         self.targets = []
+        self.predictions = []
+
 
     def get_report(self, **kwargs):
-        from .coco_evalcap_wrapper import ImageCaptionCOCOEval, ImageCaptionCOCO
-        coco = ImageCaptionCOCO(self.targets)
-        cocoRes = coco.loadRes(self.predictions)
+        from .coco_evalcap_utils import ImageCaptionCOCOEval, ImageCaptionCOCO, ImageCaptionWrapper
+        imcap_predictions, imcap_targets = ImageCaptionWrapper.convert(self.predictions, self.targets)
+        coco = ImageCaptionCOCO(imcap_targets)
+        cocoRes = coco.loadRes(imcap_predictions)
         cocoEval = ImageCaptionCOCOEval(coco, cocoRes, self.metric)
         cocoEval.params['image_id'] = cocoRes.getImgIds()
         cocoEval.evaluate()
@@ -711,7 +720,6 @@ class BleuScoreEvaluator(ImageCaptionEvaluatorBase):
         super().__init__(metric='Bleu')
         self.predictions = []
         self.targets = []
-        self.metric = 'Bleu'
 
 
 class METEORScoreEvaluator(ImageCaptionEvaluatorBase):
@@ -722,7 +730,6 @@ class METEORScoreEvaluator(ImageCaptionEvaluatorBase):
         super().__init__(metric='METEOR')
         self.predictions = []
         self.targets = []
-        self.metric = 'METEOR'
 
 
 class ROUGELScoreEvaluator(ImageCaptionEvaluatorBase):
@@ -733,7 +740,6 @@ class ROUGELScoreEvaluator(ImageCaptionEvaluatorBase):
         super().__init__(metric='ROUGE_L')
         self.predictions = []
         self.targets = []
-        self.metric = 'ROUGE_L'
 
 
 class CIDErScoreEvaluator(ImageCaptionEvaluatorBase):
@@ -744,7 +750,6 @@ class CIDErScoreEvaluator(ImageCaptionEvaluatorBase):
         super().__init__(metric='CIDEr')
         self.predictions = []
         self.targets = []
-        self.metric = 'CIDEr'
 
 
 class SPICEScoreEvaluator(ImageCaptionEvaluatorBase):
@@ -755,4 +760,3 @@ class SPICEScoreEvaluator(ImageCaptionEvaluatorBase):
         super().__init__(metric='SPICE')
         self.predictions = []
         self.targets = []
-        self.metric = 'SPICE'
