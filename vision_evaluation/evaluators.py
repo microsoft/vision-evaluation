@@ -688,8 +688,8 @@ class ImageCaptionEvaluatorBase(Evaluator):
     def add_predictions(self, predictions, targets):
         """ Evaluate list of image with image caption results using pycocoimcap tools.
         Args:
-            predictions: list of predictions [caption1, caption2, ...], shape: (N, )
-            targets: list of image caption ground truth: [[gt1, gt2, ...], [gt1, gt2, ...], ...]
+            predictions: list of string predictions [caption1, caption2, ...], shape: (N, ), type: string
+            targets: list of string ground truth for image caption task: [[gt1, gt2, ...], [gt1, gt2, ...], ...], type: string
         """
         self.targets += targets
         self.predictions += predictions

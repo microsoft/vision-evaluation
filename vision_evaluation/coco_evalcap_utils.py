@@ -48,7 +48,7 @@ class ImageCaptionCOCOEval(COCOEvalCap):
         elif metric == "SPICE":
             self.scores = [(Spice(), "SPICE")]
         else:
-            raise Exception(f'Not supported image caption metric: {metric}. Supported metric list: [Bleu, METEOR, ROUGE_L, CIDEr, SPICE]')
+            raise ValueError(f'Not supported image caption metric: {metric}. Supported metric list: [Bleu, METEOR, ROUGE_L, CIDEr, SPICE]')
 
     def reset(self):
         self.scores = []
