@@ -675,3 +675,87 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
 
     def _get_id(self):
         return f'mAP_{self.n_points}_points'
+
+
+class ImageCaptionEvaluatorBase(Evaluator):
+    """
+    Average of recall obtained on each class, for multiclass classifiation problem
+    """
+    def __init__(self, metric):
+        super(ImageCaptionEvaluatorBase, self).__init__()
+        self.metric = metric
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate list of image with image caption results using pycocoimcap tools.
+        Args:
+            predictions: list of string predictions [caption1, caption2, ...], shape: (N, ), type: string
+            targets: list of string ground truth for image caption task: [[gt1, gt2, ...], [gt1, gt2, ...], ...], type: string
+        """
+        self.targets += targets
+        self.predictions += predictions
+
+    def reset(self):
+        super(ImageCaptionEvaluatorBase, self).reset()
+        self.targets = []
+        self.predictions = []
+
+    def get_report(self, **kwargs):
+        from .coco_evalcap_utils import ImageCaptionCOCOEval, ImageCaptionCOCO, ImageCaptionWrapper
+        imcap_predictions, imcap_targets = ImageCaptionWrapper.convert(self.predictions, self.targets)
+        coco = ImageCaptionCOCO(imcap_targets)
+        cocoRes = coco.loadRes(imcap_predictions)
+        cocoEval = ImageCaptionCOCOEval(coco, cocoRes, self.metric)
+        cocoEval.params['image_id'] = cocoRes.getImgIds()
+        cocoEval.evaluate()
+        result = cocoEval.eval
+        return result
+
+
+class BleuScoreEvaluator(ImageCaptionEvaluatorBase):
+    """
+    BLEU score evaluator for image caption task. For more details, refer to http://www.aclweb.org/anthology/P02-1040.pdf.
+    """
+    def __init__(self):
+        super().__init__(metric='Bleu')
+        self.predictions = []
+        self.targets = []
+
+
+class METEORScoreEvaluator(ImageCaptionEvaluatorBase):
+    """
+    METEOR score evaluator for image caption task. For more details, refer to http://www.cs.cmu.edu/~alavie/METEOR/.
+    """
+    def __init__(self):
+        super().__init__(metric='METEOR')
+        self.predictions = []
+        self.targets = []
+
+
+class ROUGELScoreEvaluator(ImageCaptionEvaluatorBase):
+    """
+    ROUGE_L score evaluator for image caption task. For more details, refer to http://anthology.aclweb.org/W/W04/W04-1013.pdf
+    """
+    def __init__(self):
+        super().__init__(metric='ROUGE_L')
+        self.predictions = []
+        self.targets = []
+
+
+class CIDErScoreEvaluator(ImageCaptionEvaluatorBase):
+    """
+    CIDEr score evaluator for image caption task. For more details, refer to http://arxiv.org/pdf/1411.5726.pdf.
+    """
+    def __init__(self):
+        super().__init__(metric='CIDEr')
+        self.predictions = []
+        self.targets = []
+
+
+class SPICEScoreEvaluator(ImageCaptionEvaluatorBase):
+    """
+    SPICE score evaluator for image caption task. For more details, refer to https://arxiv.org/abs/1607.08822.
+    """
+    def __init__(self):
+        super().__init__(metric='SPICE')
+        self.predictions = []
+        self.targets = []
