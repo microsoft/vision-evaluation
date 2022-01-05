@@ -1,6 +1,9 @@
 # Introduction
 This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, and image caption.
 
+## Requirements ##
+- Java 1.8.0
+
 # Functionalities
 This repo currently offers evaluation metrics for three vision tasks:
 
