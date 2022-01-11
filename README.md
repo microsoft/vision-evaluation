@@ -1,6 +1,12 @@
 # Introduction
 This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, and image caption.
 
+## Requirements ##
+The image caption evaluation pipeline depends on Jave Runtime Environment (JRE).
+- Java 1.8.0
+
+If you only need the image classification or object detection evaluation pipeline, JRE is not required.
+
 # Functionalities
 This repo currently offers evaluation metrics for three vision tasks:
 
