@@ -10,11 +10,7 @@ This repo
 - contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification and object detection.
 - defines the contract for metric calculation code in `Evaluator` class, for bringing custom evaluators under the same interface
 
-This repo isn't trying to re-invent the wheel, but to provide centralized defaults for most metrics across different vision tasks so dev/research teams can compare model performance on the same page.
-
-## Additional Requirements
-
-The image caption evaluators requires Jave Runtime Environment (JRE) (Java 1.8.0). This is not required for other evaluators.
+This repo isn't trying to re-invent the wheel, but to provide centralized defaults for most metrics across different vision tasks so dev/research teams can compare model performance on the same page. As expected, you can find many implementations backed up by well-known sklearn or pycocotools.
 
 ## Functionalities
 
@@ -44,3 +40,7 @@ While different machine learning problems/applications prefer different metrics,
 - **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
 - **Object detection**: mAP@IoU=30 and mAP@IoU=50
 - **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
+
+## Additional Requirements
+
+The image caption evaluators requires Jave Runtime Environment (JRE) (Java 1.8.0). This is not required for other evaluators.
