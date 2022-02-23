@@ -1,7 +1,7 @@
 import setuptools
 from os import path
 
-VERSION = '0.2.2'
+VERSION = '0.2.3'
 
 here = path.abspath(path.dirname(__file__))
 
