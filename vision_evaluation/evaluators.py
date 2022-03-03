@@ -394,8 +394,8 @@ class RocAucEvaluator(Evaluator):
 
     def reset(self):
         super(RocAucEvaluator, self).reset()
-        self.all_targets = []
-        self.all_predictions = []
+        self.all_targets = None
+        self.all_predictions = None
 
     def add_predictions(self, predictions, targets):
         """ add predictions and targets.
@@ -404,8 +404,8 @@ class RocAucEvaluator(Evaluator):
             targets: targets of array-like of shape (n_samples,) or (n_samples, n_classes)
 
         """
-        self.all_targets += targets
-        self.all_predictions += predictions
+        self.all_targets = np.concatenate([self.all_targets, np.array(targets)]) if self.all_targets else np.array(targets)
+        self.all_predictions = np.concatenate([self.all_predictions, np.array(predictions)]) if self.all_predictions else np.array(predictions)
 
     def get_report(self, **kwargs):
         average = kwargs.get('average', 'macro')
@@ -413,8 +413,13 @@ class RocAucEvaluator(Evaluator):
         max_fpr = kwargs.get('max_fpr')
         multi_class = kwargs.get('multi_class', 'raise')
         labels = kwargs.get('labels')
+
+        if len(self.all_targets.shape) == 1 and len(self.all_predictions.shape) == 2 and self.all_predictions.shape[1] == 2:
+            all_predictions = self.all_predictions[:, 1]
+        else:
+            all_predictions = self.all_predictions
         return {
-            'roc_auc': sm.roc_auc_score(y_true=self.all_targets, y_score=self.all_predictions, average=average, sample_weight=sample_weight, max_fpr=max_fpr, multi_class=multi_class, labels=labels)
+            'roc_auc': sm.roc_auc_score(y_true=self.all_targets, y_score=all_predictions, average=average, sample_weight=sample_weight, max_fpr=max_fpr, multi_class=multi_class, labels=labels)
         }
 
 
