@@ -1,5 +1,6 @@
 import collections
 import statistics
+
 import sklearn.metrics as sm
 import numpy as np
 from abc import ABC, abstractmethod
@@ -27,6 +28,7 @@ class Evaluator(ABC):
     """
 
     def __init__(self):
+        self.custom_fields = {}
         self.reset()
 
     @abstractmethod
@@ -67,6 +69,9 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
     """
 
     def __init__(self, prediction_filter=None):
+        self.all_targets = np.array([])
+        self.all_predictions = np.array([])
+
         super(MemorizingEverythingEvaluator, self).__init__()
         self.prediction_filter = prediction_filter
 
@@ -133,7 +138,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         pass
 
     def get_report(self, **kwargs):
-        average = kwargs['average'] if 'average' in kwargs else 'macro'
+        average = kwargs.get('average', 'macro')
         return {self._get_id(): self.calculate_score(average)}
 
 
@@ -143,8 +148,11 @@ class TopKAccuracyEvaluator(Evaluator):
     """
 
     def __init__(self, k):
-        self.prediction_filter = TopKPredictionFilter(k)
+        self.total_num = 0
+        self.topk_correct_num = 0
+
         super(TopKAccuracyEvaluator, self).__init__()
+        self.prediction_filter = TopKPredictionFilter(k)
 
     def reset(self):
         super(TopKAccuracyEvaluator, self).reset()
@@ -179,6 +187,9 @@ class ThresholdAccuracyEvaluator(Evaluator):
     """
 
     def __init__(self, threshold):
+        self.num_sample = 0
+        self.sample_accuracy_sum = 0
+
         super().__init__()
         self.prediction_filter = ThresholdPredictionFilter(threshold)
 
@@ -220,7 +231,7 @@ class F1ScoreEvaluator(EvaluatorAggregator):
         self._filter_id = prediction_filter.identifier
 
     def get_report(self, **kwargs):
-        average = kwargs['average'] if 'average' in kwargs else 'macro'
+        average = kwargs.get('average', 'macro')
         report = super(F1ScoreEvaluator, self).get_report(average=average)
         prec = report[f'precision_{self._filter_id}']
         recall = report[f'recall_{self._filter_id}']
@@ -374,6 +385,44 @@ class EceLossEvaluator(Evaluator):
         self.sum_confidence_in_bin = np.zeros(self.n_bins)
 
 
+class RocAucEvaluator(Evaluator):
+    """
+    Utilize sklearn.metrics.roc_auc_score to Compute Area Under the Receiver Operating Characteristic Curve (ROC AUC) from prediction scores.
+
+    Check https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html#sklearn.metrics.roc_auc_score for details.
+    """
+
+    def reset(self):
+        super(RocAucEvaluator, self).reset()
+        self.all_targets = None
+        self.all_predictions = None
+
+    def add_predictions(self, predictions, targets):
+        """ add predictions and targets.
+        Args:
+            predictions: predictions of array-like of shape (n_samples,) or (n_samples, n_classes)
+            targets: targets of array-like of shape (n_samples,) or (n_samples, n_classes)
+
+        """
+        self.all_targets = np.concatenate([self.all_targets, np.array(targets)]) if self.all_targets else np.array(targets)
+        self.all_predictions = np.concatenate([self.all_predictions, np.array(predictions)]) if self.all_predictions else np.array(predictions)
+
+    def get_report(self, **kwargs):
+        average = kwargs.get('average', 'macro')
+        sample_weight = kwargs.get('sample_weight')
+        max_fpr = kwargs.get('max_fpr')
+        multi_class = kwargs.get('multi_class', 'raise')
+        labels = kwargs.get('labels')
+
+        if len(self.all_targets.shape) == 1 and len(self.all_predictions.shape) == 2 and self.all_predictions.shape[1] == 2:
+            all_predictions = self.all_predictions[:, 1]
+        else:
+            all_predictions = self.all_predictions
+        return {
+            'roc_auc': sm.roc_auc_score(y_true=self.all_targets, y_score=all_predictions, average=average, sample_weight=sample_weight, max_fpr=max_fpr, multi_class=multi_class, labels=labels)
+        }
+
+
 class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
     def __init__(self, iou=0.5, report_tag_wise=False):
         """
@@ -481,7 +530,7 @@ class MeanAveragePrecisionEvaluatorForSingleIOU(Evaluator):
         return sm.average_precision_score(is_correct, probabilities, average=average) * recall
 
     def get_report(self, **kwargs):
-        average = kwargs['average'] if 'average' in kwargs else 'macro'
+        average = kwargs.get('average', 'macro')
         for class_index in self.is_correct:
             ap = MeanAveragePrecisionEvaluatorForSingleIOU._calculate_average_precision(self.is_correct[class_index], self.probabilities[class_index], self.true_num[class_index], average)
             self.aps[class_index] = ap
@@ -626,7 +675,7 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
 
 class BalancedAccuracyScoreEvaluator(MemorizingEverythingEvaluator):
     """
-    Average of recall obtained on each class, for multiclass classifiation problem
+    Average of recall obtained on each class, for multiclass classification problem
     """
 
     def _calculate(self, targets, predictions, average):
@@ -679,9 +728,12 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
 
 class ImageCaptionEvaluatorBase(Evaluator):
     """
-    Average of recall obtained on each class, for multiclass classifiation problem
+    Base class for image caption metric evaluator
     """
+
     def __init__(self, metric):
+        self.targets = []
+        self.predictions = []
         super(ImageCaptionEvaluatorBase, self).__init__()
         self.metric = metric
 
@@ -715,6 +767,7 @@ class BleuScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     BLEU score evaluator for image caption task. For more details, refer to http://www.aclweb.org/anthology/P02-1040.pdf.
     """
+
     def __init__(self):
         super().__init__(metric='Bleu')
         self.predictions = []
@@ -725,6 +778,7 @@ class METEORScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     METEOR score evaluator for image caption task. For more details, refer to http://www.cs.cmu.edu/~alavie/METEOR/.
     """
+
     def __init__(self):
         super().__init__(metric='METEOR')
         self.predictions = []
@@ -735,6 +789,7 @@ class ROUGELScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     ROUGE_L score evaluator for image caption task. For more details, refer to http://anthology.aclweb.org/W/W04/W04-1013.pdf
     """
+
     def __init__(self):
         super().__init__(metric='ROUGE_L')
         self.predictions = []
@@ -745,6 +800,7 @@ class CIDErScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     CIDEr score evaluator for image caption task. For more details, refer to http://arxiv.org/pdf/1411.5726.pdf.
     """
+
     def __init__(self):
         super().__init__(metric='CIDEr')
         self.predictions = []
@@ -755,6 +811,7 @@ class SPICEScoreEvaluator(ImageCaptionEvaluatorBase):
     """
     SPICE score evaluator for image caption task. For more details, refer to https://arxiv.org/abs/1607.08822.
     """
+
     def __init__(self):
         super().__init__(metric='SPICE')
         self.predictions = []

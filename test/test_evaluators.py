@@ -6,8 +6,7 @@ import os
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
-    CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator
-
+    CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -583,3 +582,60 @@ class TestImageCaptionEvaluator(unittest.TestCase):
         evaluator.add_predictions(predictions=self.imcap_predictions, targets=self.imcap_targets)
         report = evaluator.get_report()
         self.assertAlmostEqual(report["SPICE"], 0.2226814382948703)
+
+
+class TestRocAucEvaluator(unittest.TestCase):
+    @staticmethod
+    def _get_metric(predictions, targets, **kwargs):
+        eval = RocAucEvaluator()
+        eval.add_predictions(predictions, targets)
+        roc_auc = eval.get_report(**kwargs)['roc_auc']
+        return roc_auc
+
+    def test_perfect_predictions(self):
+        predictions = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        targets = [0, 0, 0, 1, 1, 1]
+        roc_auc = self._get_metric(predictions, targets)
+        assert roc_auc == 1.0
+        roc_auc = self._get_metric(np.array(predictions), np.array(targets))
+        assert roc_auc == 1.0
+
+    def test_perfect_predictions_prob_vec(self):
+        predictions = [[1, 0], [0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.6, 0.4], [0.5, 0.5]]
+        targets = [0, 0, 0, 1, 1, 1]
+        roc_auc = self._get_metric(predictions, targets)
+        assert roc_auc == 1.0
+        roc_auc = self._get_metric(np.array(predictions), np.array(targets))
+        assert roc_auc == 1.0
+
+    def test_abysmal_predictions(self):
+        predictions = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        targets = [1, 1, 1, 0, 0, 0]
+        roc_auc = self._get_metric(predictions, targets)
+        assert roc_auc == 0.0
+        roc_auc = self._get_metric(np.array(predictions), np.array(targets))
+        assert roc_auc == 0.0
+
+    def test_imperfect_predictions(self):
+        predictions = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        targets = [0, 0, 0, 1, 0, 1]
+        roc_auc = self._get_metric(predictions, targets)
+        assert roc_auc == 0.875
+        roc_auc = self._get_metric(np.array(predictions), np.array(targets))
+        assert roc_auc == 0.875
+
+    def test_perfect_multiclass_predictions(self):
+        predictions = [[0.8, 0.2, 0.0], [0.7, 0.2, 0.1], [0.1, 0.6, 0.3], [0.2, 0.7, 0.1], [0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]
+        targets = [0, 0, 1, 1, 2, 2]
+        roc_auc = self._get_metric(predictions, targets, multi_class='ovr')
+        assert roc_auc == 1.0
+        roc_auc = self._get_metric(np.array(predictions), np.array(targets), multi_class='ovr')
+        assert roc_auc == 1.0
+
+    def test_perfect_multilabel_predictions(self):
+        predictions = [[0.8, 0.2, 0.0], [0.7, 0.2, 0.1], [0.1, 0.6, 0.3], [0.2, 0.7, 0.1], [0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]
+        targets = [[1, 0, 0], [1, 0, 0], [0, 1, 1], [0, 1, 0], [0, 1, 1], [0, 1, 1]]
+        roc_auc = self._get_metric(predictions, targets)
+        assert roc_auc == 1.0
+        roc_auc = self._get_metric(np.array(predictions), np.array(targets))
+        assert roc_auc == 1.0
