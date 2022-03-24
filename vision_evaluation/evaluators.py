@@ -828,25 +828,25 @@ class MattingEvaluatorBase(Evaluator):
         self.predictions = []
         self.targets = []
         self.metric = None
-    
+
     def add_predictions(self, predictions, targets):
         """ Evaluate list of image with image matting results
         Args:
             predictions: list of image matting predictions, [mating1, mating2, ...]
             targets: list of image matting ground truth, [gt1, gt2, ...]
         """
-        self.targets.append(targets)
-        self.predictions.append(predictions)
-    
+        self.targets += targets
+        self.predictions += predictions
+
     def reset(self):
         super(MattingEvaluatorBase, self).reset()
         self.targets = []
         self.predictions = []
-    
+
     def _convert2binary(self, mask, threshold=128):
         bin_mask = mask.copy()
-        bin_mask[mask<threshold] = 0
-        bin_mask[mask>=threshold] = 1
+        bin_mask[mask < threshold] = 0
+        bin_mask[mask >= threshold] = 1
         return bin_mask
 
     def _find_contours(self, matting, thickness=10):
@@ -879,13 +879,13 @@ class MeanIOUEvaluator(MattingEvaluatorBase):
     def get_report(self, convert_to_binary=True):
         num_class = 2
         mean_iou = []
-        for pred_mask, gt_mask in zip(self.predictions[0], self.targets[0]):
+        for pred_mask, gt_mask in zip(self.predictions, self.targets):
             pred_mask = np.asarray(pred_mask)
             gt_mask = np.asarray(gt_mask)
 
             if convert_to_binary:
-                pred_binmask = self._convert2binary(pred_mask)  
-                gt_binmask = self._convert2binary(gt_mask) 
+                pred_binmask = self._convert2binary(pred_mask)
+                gt_binmask = self._convert2binary(gt_mask)
             else:
                 pred_binmask = pred_mask
                 gt_binmask = gt_mask
@@ -893,12 +893,12 @@ class MeanIOUEvaluator(MattingEvaluatorBase):
             label = num_class * gt_binmask.astype('int') + pred_binmask
             count = np.bincount(label.flatten(), minlength=num_class**2)
             confusion_matrix = count.reshape(num_class, num_class)
-            iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix)+ 1e-10)
-            valid = confusion_matrix.sum(axis=1) > 0  
+            iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix) + 1e-10)
+            valid = confusion_matrix.sum(axis=1) > 0
             mean_iou_per_image = np.nanmean(iou[valid])
             mean_iou.append(mean_iou_per_image)
 
-        return {self.metric: sum(mean_iou) / len(mean_iou)} 
+        return {self.metric: sum(mean_iou) / len(mean_iou)}
 
 
 class ForegroundIOUEvaluator(MattingEvaluatorBase):
@@ -912,25 +912,25 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
     def get_report(self, convert_to_binary=True):
         num_class = 2
         fg_iou = []
-        for pred_mask, gt_mask in zip(self.predictions[0], self.targets[0]):
+        for pred_mask, gt_mask in zip(self.predictions, self.targets):
             pred_mask = np.asarray(pred_mask)
             gt_mask = np.asarray(gt_mask)
 
             if convert_to_binary:
-                pred_binmask = self._convert2binary(pred_mask)  
-                gt_binmask = self._convert2binary(gt_mask) 
+                pred_binmask = self._convert2binary(pred_mask)
+                gt_binmask = self._convert2binary(gt_mask)
             else:
                 pred_binmask = pred_mask
                 gt_binmask = gt_mask
 
-            if np.all(gt_binmask==0):
-                res = 1 if np.all(pred_binmask==0) else 0
+            if np.all(gt_binmask == 0):
+                res = 1 if np.all(pred_binmask == 0) else 0
                 return {self.metric: res}
-            
+
             label = num_class * gt_binmask.astype('int') + pred_binmask
             count = np.bincount(label.flatten(), minlength=num_class**2)
             confusion_matrix = count.reshape(num_class, num_class)
-            iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix) + 1e-10)    
+            iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix) + 1e-10)
             fg_iou.append(iou[1])
 
         return {self.metric: sum(fg_iou) / len(fg_iou)}
@@ -944,16 +944,16 @@ class BoundaryMeanIOUEvaluator(MattingEvaluatorBase):
         super(BoundaryMeanIOUEvaluator, self).__init__()
         self.metric = 'Boundary_mIOU'
         self.base_evaluator = MeanIOUEvaluator()
-    
+
     def get_report(self):
-        for pred_mask, gt_mask in zip(self.predictions[0], self.targets[0]):
+        for pred_mask, gt_mask in zip(self.predictions, self.targets):
             pred_mask = np.asarray(pred_mask)
             gt_mask = np.asarray(gt_mask)
 
-            pred_binmask = self._convert2binary(pred_mask)  
-            gt_binmask = self._convert2binary(gt_mask) 
+            pred_binmask = self._convert2binary(pred_mask)
+            gt_binmask = self._convert2binary(gt_mask)
             gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
-            self.base_evaluator.add_predictions(pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64))
+            self.base_evaluator.add_predictions([pred_boundary_mask.astype(np.int64)], [gt_boundary_mask.astype(np.int64)])
         result = self.base_evaluator.get_report(convert_to_binary=False)
         return {self.metric: result[self.base_evaluator.metric]}
 
@@ -966,16 +966,16 @@ class BoundaryForegroundIOUEvaluator(MattingEvaluatorBase):
         super(BoundaryForegroundIOUEvaluator, self).__init__()
         self.metric = 'Boundary_fg_IOU'
         self.base_evaluator = ForegroundIOUEvaluator()
-    
+
     def get_report(self):
-        for pred_mask, gt_mask in zip(self.predictions[0], self.targets[0]):
+        for pred_mask, gt_mask in zip(self.predictions, self.targets):
             pred_mask = np.asarray(pred_mask)
             gt_mask = np.asarray(gt_mask)
 
-            pred_binmask = self._convert2binary(pred_mask)  
-            gt_binmask = self._convert2binary(gt_mask) 
+            pred_binmask = self._convert2binary(pred_mask)
+            gt_binmask = self._convert2binary(gt_mask)
             gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
-            self.base_evaluator.add_predictions(pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64))
+            self.base_evaluator.add_predictions([pred_boundary_mask.astype(np.int64)], [gt_boundary_mask.astype(np.int64)])
         result = self.base_evaluator.get_report(convert_to_binary=False)
         return {self.metric: result[self.base_evaluator.metric]}
 
@@ -987,12 +987,12 @@ class L1LossEvaluator(MattingEvaluatorBase):
     def __init__(self):
         super(L1LossEvaluator, self).__init__()
         self.metric = 'L1Loss'
-    
+
     def get_report(self):
         l1_loss = []
-        for pred_mask, gt_mask in zip(self.predictions[0], self.targets[0]):
+        for pred_mask, gt_mask in zip(self.predictions, self.targets):
             pred_mask = np.asarray(pred_mask)
             gt_mask = np.asarray(gt_mask)
-            mean_l1=np.abs(pred_mask.astype(np.float)-gt_mask.astype(np.float)).mean()
+            mean_l1 = np.abs(pred_mask.astype(np.float)-gt_mask.astype(np.float)).mean()
             l1_loss.append(mean_l1)
         return {self.metric: sum(l1_loss) / len(l1_loss)}
