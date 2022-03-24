@@ -681,5 +681,4 @@ class TestImageMattingEvaluator(unittest.TestCase):
         evaluator = BoundaryForegroundIOUEvaluator()
         evaluator.add_predictions(predictions=self.image_matting_predictions, targets=self.image_matting_targets)
         report = evaluator.get_report()
-        print(report)
         self.assertAlmostEqual(report["Boundary_fg_IOU"], 0.9999999999999953)
