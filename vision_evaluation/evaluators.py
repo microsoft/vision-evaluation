@@ -907,7 +907,7 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
     """
     def __init__(self):
         super(ForegroundIOUEvaluator, self).__init__()
-        self.metric = 'ForegroundIOU'
+        self.metric = 'fgIOU'
 
     def get_report(self, convert_to_binary=True):
         num_class = 2
@@ -942,7 +942,7 @@ class BoundaryMeanIOUEvaluator(MattingEvaluatorBase):
     """
     def __init__(self):
         super(BoundaryMeanIOUEvaluator, self).__init__()
-        self.metric = 'Boundary_mIOU'
+        self.metric = 'b_mIOU'
         self.base_evaluator = MeanIOUEvaluator()
 
     def get_report(self):
@@ -964,7 +964,7 @@ class BoundaryForegroundIOUEvaluator(MattingEvaluatorBase):
     """
     def __init__(self):
         super(BoundaryForegroundIOUEvaluator, self).__init__()
-        self.metric = 'Boundary_fg_IOU'
+        self.metric = 'b_fgIOU'
         self.base_evaluator = ForegroundIOUEvaluator()
 
     def get_report(self):
@@ -980,13 +980,13 @@ class BoundaryForegroundIOUEvaluator(MattingEvaluatorBase):
         return {self.metric: result[self.base_evaluator.metric]}
 
 
-class L1LossEvaluator(MattingEvaluatorBase):
+class L1ErrorEvaluator(MattingEvaluatorBase):
     """
     L1 loss evaluator
     """
     def __init__(self):
-        super(L1LossEvaluator, self).__init__()
-        self.metric = 'L1Loss'
+        super(L1ErrorEvaluator, self).__init__()
+        self.metric = 'L1Err'
 
     def get_report(self):
         l1_loss = []
