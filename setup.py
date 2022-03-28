@@ -33,5 +33,6 @@ setuptools.setup(name='vision-evaluation',
                      'sklearn',
                      'pycocotools',
                      'pycocoevalcap',
-                     'opencv-python'
+                     'opencv-python',
+                     'Pillow~=9.0.1'
                  ])
