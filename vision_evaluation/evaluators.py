@@ -982,7 +982,7 @@ class BoundaryForegroundIOUEvaluator(MattingEvaluatorBase):
 
 class L1ErrorEvaluator(MattingEvaluatorBase):
     """
-    L1 loss evaluator
+    L1 error evaluator
     """
     def __init__(self):
         super(L1ErrorEvaluator, self).__init__()
