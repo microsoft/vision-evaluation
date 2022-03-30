@@ -1,7 +1,7 @@
 import setuptools
 from os import path
 
-VERSION = '0.2.4'
+VERSION = '0.2.5'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -34,5 +34,5 @@ setuptools.setup(name='vision-evaluation',
                      'pycocotools',
                      'pycocoevalcap',
                      'opencv-python',
-                     'Pillow~=9.0.1'
+                     'Pillow>=6.2.2'
                  ])

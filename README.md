@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, and image caption, image matting.
+This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, image caption, and image matting.
 
 If you only need the image classification or object detection evaluation pipeline, JRE is not required.
 This repo
@@ -46,7 +46,7 @@ While different machine learning problems/applications prefer different metrics,
 - **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
 - **Object detection**: mAP@IoU=30 and mAP@IoU=50
 - **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
-- **Image caption**: mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
+- **Image matting**: mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
 
 ## Additional Requirements
 
