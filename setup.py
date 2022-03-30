@@ -34,5 +34,5 @@ setuptools.setup(name='vision-evaluation',
                      'pycocotools',
                      'pycocoevalcap',
                      'opencv-python',
-                     'Pillow~=9.0.1'
+                     'Pillow>=6.2.2'
                  ])
