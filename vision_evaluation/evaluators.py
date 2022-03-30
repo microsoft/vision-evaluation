@@ -830,9 +830,9 @@ class MattingEvaluatorBase(Evaluator):
         self.metric = None
 
     def add_predictions(self, predictions, targets):
-        """ Evaluate list of image with image matting results
+        """ Adding predictions and ground truth of images for image matting task
         Args:
-            predictions: list of image matting predictions, [mating1, mating2, ...]
+            predictions: list of image matting predictions, [matting1, matting2, ...]
             targets: list of image matting ground truth, [gt1, gt2, ...]
         """
         self.targets += targets
