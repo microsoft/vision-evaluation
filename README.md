@@ -46,7 +46,7 @@ While different machine learning problems/applications prefer different metrics,
 - **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
 - **Object detection**: mAP@IoU=30 and mAP@IoU=50
 - **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
-- **Image caption**: mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
+- **Image matting**: mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
 
 ## Additional Requirements
 
