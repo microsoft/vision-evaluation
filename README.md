@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, and image caption, image matting.
+This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, image caption, and image matting.
 
 If you only need the image classification or object detection evaluation pipeline, JRE is not required.
 This repo
