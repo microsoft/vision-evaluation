@@ -2,7 +2,6 @@ import unittest
 import numpy as np
 import json
 import pathlib
-import os
 from PIL import Image
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \

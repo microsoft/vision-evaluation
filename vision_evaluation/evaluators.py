@@ -833,7 +833,7 @@ class MattingEvaluatorBase(Evaluator):
         super(MattingEvaluatorBase, self).reset()
 
     def _convert2binary(self, mask, threshold=128):
-        bin_mask = mask>=128
+        bin_mask = mask >= 128
         return bin_mask.astype(mask.dtype)
 
     def _preprocess(self, pred_mask, gt_mask):
@@ -863,6 +863,7 @@ class MattingEvaluatorBase(Evaluator):
 
     def get_report(self):
         return {self._metric: self._metric_sum / self._num_samples if self._num_samples else 0.0}
+
 
 class MeanIOUEvaluator(MattingEvaluatorBase):
     """
@@ -937,7 +938,7 @@ class BoundaryMeanIOUEvaluator(MeanIOUEvaluator):
         pred_binmask = self._convert2binary(pred_mask)
         gt_binmask = self._convert2binary(gt_mask)
         gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
-        
+
         return pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64)
 
 
@@ -948,13 +949,14 @@ class BoundaryForegroundIOUEvaluator(ForegroundIOUEvaluator):
     def __init__(self):
         super(BoundaryForegroundIOUEvaluator, self).__init__()
         self._metric = 'b_fgIOU'
-    
+
     def _preprocess(self, pred_mask, gt_mask):
         pred_mask = np.asarray(pred_mask)
         gt_mask = np.asarray(gt_mask)
         pred_binmask = self._convert2binary(pred_mask)
         gt_binmask = self._convert2binary(gt_mask)
         gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
+
         return pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64)
 
 
