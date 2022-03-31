@@ -833,10 +833,8 @@ class MattingEvaluatorBase(Evaluator):
         self.predictions = []
 
     def _convert2binary(self, mask, threshold=128):
-        bin_mask = mask.copy()
-        bin_mask[mask < threshold] = 0
-        bin_mask[mask >= threshold] = 1
-        return bin_mask
+        bin_mask = mask>=128
+        return bin_mask.astype(mask.dtype)
 
     def _find_contours(self, matting, thickness=10):
         matting = np.copy(matting)
