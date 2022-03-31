@@ -825,16 +825,23 @@ class MattingEvaluatorBase(Evaluator):
     """
     def __init__(self):
         super(MattingEvaluatorBase, self).__init__()
-        self.metric = None
+        self._metric = None
+        self._num_samples = 0
+        self._metric_sum = 0
 
     def reset(self):
         super(MattingEvaluatorBase, self).reset()
-        self.targets = []
-        self.predictions = []
 
     def _convert2binary(self, mask, threshold=128):
         bin_mask = mask>=128
         return bin_mask.astype(mask.dtype)
+
+    def _preprocess(self, pred_mask, gt_mask):
+        pred_mask = np.asarray(pred_mask)
+        gt_mask = np.asarray(gt_mask)
+        pred_binmask = self._convert2binary(pred_mask)
+        gt_binmask = self._convert2binary(gt_mask)
+        return pred_binmask, gt_binmask
 
     def _find_contours(self, matting, thickness=10):
         matting = np.copy(matting)
@@ -854,6 +861,8 @@ class MattingEvaluatorBase(Evaluator):
         pred_contour_mask = pred_mask * contour_mask
         return gt_contour_mask, pred_contour_mask
 
+    def get_report(self):
+        return {self._metric: self._metric_sum / self._num_samples if self._num_samples else 0.0}
 
 class MeanIOUEvaluator(MattingEvaluatorBase):
     """
@@ -861,39 +870,26 @@ class MeanIOUEvaluator(MattingEvaluatorBase):
     """
     def __init__(self):
         super(MeanIOUEvaluator, self).__init__()
-        self.metric = 'mIOU'
-        self.num_samples = 0
-        self.metric_sum = 0
+        self._metric = 'mIOU'
 
-    def add_predictions(self, predictions, targets, convert_to_binary=True):
+    def add_predictions(self, predictions, targets):
         """ Adding predictions and ground truth of images for image matting task
         Args:
-            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object or Numpy array
-            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object or Numpy array
+            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
+            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
             convert_to_binary: flag to indicating whether to convert the mask to binary
         """
         num_class = 2
-        self.num_samples += len(predictions)
+        self._num_samples += len(predictions)
         for pred_mask, gt_mask in zip(predictions, targets):
-            pred_mask = np.asarray(pred_mask)
-            gt_mask = np.asarray(gt_mask)
-            if convert_to_binary:
-                pred_binmask = self._convert2binary(pred_mask)
-                gt_binmask = self._convert2binary(gt_mask)
-            else:
-                pred_binmask = pred_mask
-                gt_binmask = gt_mask
-
+            pred_binmask, gt_binmask = self._preprocess(pred_mask, gt_mask)
             label = num_class * gt_binmask.astype('int') + pred_binmask
             count = np.bincount(label.flatten(), minlength=num_class**2)
             confusion_matrix = count.reshape(num_class, num_class)
             iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix) + 1e-10)
             valid = confusion_matrix.sum(axis=1) > 0
             mean_iou_per_image = np.nanmean(iou[valid])
-            self.metric_sum += mean_iou_per_image
-
-    def get_report(self):
-        return {self.metric: self.metric_sum / self.num_samples if self.num_samples else 0.0}
+            self._metric_sum += mean_iou_per_image
 
 
 class ForegroundIOUEvaluator(MattingEvaluatorBase):
@@ -902,30 +898,19 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
     """
     def __init__(self):
         super(ForegroundIOUEvaluator, self).__init__()
-        self.metric = 'fgIOU'
-        self.num_samples = 0
-        self.metric_sum = 0
+        self._metric = 'fgIOU'
 
     def add_predictions(self, predictions, targets, convert_to_binary=True):
         """ Adding predictions and ground truth of images for image matting task
         Args:
-            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object or Numpy array
-            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object or Numpy array
+            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
+            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
             convert_to_binary: flag to indicating whether to convert the mask to binary
         """
         num_class = 2
-        self.num_samples += len(predictions)
+        self._num_samples += len(predictions)
         for pred_mask, gt_mask in zip(predictions, targets):
-            pred_mask = np.asarray(pred_mask)
-            gt_mask = np.asarray(gt_mask)
-
-            if convert_to_binary:
-                pred_binmask = self._convert2binary(pred_mask)
-                gt_binmask = self._convert2binary(gt_mask)
-            else:
-                pred_binmask = pred_mask
-                gt_binmask = gt_mask
-
+            pred_binmask, gt_binmask = self._preprocess(pred_mask, gt_mask)
             if np.all(gt_binmask == 0):
                 res = 1 if np.all(pred_binmask == 0) else 0
                 self.metric_sum += res
@@ -935,78 +920,42 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
             count = np.bincount(label.flatten(), minlength=num_class**2)
             confusion_matrix = count.reshape(num_class, num_class)
             iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix) + 1e-10)
-            self.metric_sum += iou[1]
-
-    def get_report(self):
-        return {self.metric: self.metric_sum / self.num_samples if self.num_samples else 0.0}
+            self._metric_sum += iou[1]
 
 
-class BoundaryMeanIOUEvaluator(MattingEvaluatorBase):
+class BoundaryMeanIOUEvaluator(MeanIOUEvaluator):
     """
     Boundary mean intersection-over-union evaluator
     """
     def __init__(self):
         super(BoundaryMeanIOUEvaluator, self).__init__()
-        self.metric = 'b_mIOU'
-        self.base_evaluator = MeanIOUEvaluator()
-        self.num_samples = 0
-        self.metric_sum = 0
+        self._metric = 'b_mIOU'
 
-    def add_predictions(self, predictions, targets):
-        """ Adding predictions and ground truth of images for image matting task
-        Args:
-            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object or Numpy array
-            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object or Numpy array
-        """
-        gt_mask_list = []
-        pred_mask_list = []
-        for pred_mask, gt_mask in zip(predictions, targets):
-            pred_mask = np.asarray(pred_mask)
-            gt_mask = np.asarray(gt_mask)
-
-            pred_binmask = self._convert2binary(pred_mask)
-            gt_binmask = self._convert2binary(gt_mask)
-            gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
-            gt_mask_list.append(gt_boundary_mask.astype(np.int64))
-            pred_mask_list.append(pred_boundary_mask.astype(np.int64))
-        self.base_evaluator.add_predictions(pred_mask_list, gt_mask_list, convert_to_binary=False)
-
-    def get_report(self):
-        return {self.metric: self.base_evaluator.metric_sum / self.base_evaluator.num_samples if self.base_evaluator.num_samples else 0.0}
+    def _preprocess(self, pred_mask, gt_mask):
+        pred_mask = np.asarray(pred_mask)
+        gt_mask = np.asarray(gt_mask)
+        pred_binmask = self._convert2binary(pred_mask)
+        gt_binmask = self._convert2binary(gt_mask)
+        gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
+        
+        return pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64)
 
 
-class BoundaryForegroundIOUEvaluator(MattingEvaluatorBase):
+class BoundaryForegroundIOUEvaluator(ForegroundIOUEvaluator):
     """
     Boundary foreground intersection-over-union evaluator
     """
     def __init__(self):
         super(BoundaryForegroundIOUEvaluator, self).__init__()
-        self.metric = 'b_fgIOU'
-        self.base_evaluator = ForegroundIOUEvaluator()
-        self.num_samples = 0
-        self.metric_sum = 0
-
-    def add_predictions(self, predictions, targets):
-        """ Adding predictions and ground truth of images for image matting task
-        Args:
-            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object or Numpy array
-            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object or Numpy array
-        """
-        gt_mask_list = []
-        pred_mask_list = []
-        for pred_mask, gt_mask in zip(predictions, targets):
-            pred_mask = np.asarray(pred_mask)
-            gt_mask = np.asarray(gt_mask)
-
-            pred_binmask = self._convert2binary(pred_mask)
-            gt_binmask = self._convert2binary(gt_mask)
-            gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
-            gt_mask_list.append(gt_boundary_mask.astype(np.int64))
-            pred_mask_list.append(pred_boundary_mask.astype(np.int64))
-        self.base_evaluator.add_predictions(pred_mask_list, gt_mask_list, convert_to_binary=False)
-
-    def get_report(self):
-        return {self.metric: self.base_evaluator.metric_sum / self.base_evaluator.num_samples if self.base_evaluator.num_samples else 0.0}
+        self._metric = 'b_fgIOU'
+    
+    def _preprocess(self, pred_mask, gt_mask):
+        pred_mask = np.asarray(pred_mask)
+        gt_mask = np.asarray(gt_mask)
+        pred_binmask = self._convert2binary(pred_mask)
+        gt_binmask = self._convert2binary(gt_mask)
+        gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
+        return pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64)
 
 
 class L1ErrorEvaluator(MattingEvaluatorBase):
@@ -1015,22 +964,17 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
     """
     def __init__(self):
         super(L1ErrorEvaluator, self).__init__()
-        self.metric = 'L1Err'
-        self.num_samples = 0
-        self.metric_sum = 0
+        self._metric = 'L1Err'
 
     def add_predictions(self, predictions, targets):
         """ Adding predictions and ground truth of images for image matting task
         Args:
-            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object or Numpy array
-            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object or Numpy array
+            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
+            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
         """
-        self.num_samples += len(predictions)
+        self._num_samples += len(predictions)
         for pred_mask, gt_mask in zip(predictions, targets):
             pred_mask = np.asarray(pred_mask)
             gt_mask = np.asarray(gt_mask)
             mean_l1 = np.abs(pred_mask.astype(np.float)-gt_mask.astype(np.float)).mean()
-            self.metric_sum += mean_l1
-
-    def get_report(self):
-        return {self.metric: self.metric_sum / self.num_samples if self.num_samples else 0.0}
+            self._metric_sum += mean_l1
