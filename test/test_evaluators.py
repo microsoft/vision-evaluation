@@ -533,8 +533,8 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
 
 
 class TestImageCaptionEvaluator(unittest.TestCase):
-    predictions_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'data', 'image_caption_prediction.json')
-    ground_truth_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'data', 'image_caption_gt.json')
+    predictions_file = pathlib.Path(__file__).resolve().parent / 'data' / 'image_caption_prediction.json'
+    ground_truth_file = pathlib.Path(__file__).resolve().parent / 'data' / 'image_caption_gt.json'
     imcap_predictions, imcap_targets = [], []
     with open(predictions_file, 'r') as f:
         predictions_dict = json.load(f)
@@ -645,7 +645,6 @@ class TestRocAucEvaluator(unittest.TestCase):
 
 class TestImageMattingEvaluator(unittest.TestCase):
 
-    data_path = os.path.join(pathlib.Path(__file__).resolve().parent, 'data')
     image_matting_predictions = []
     image_matting_targets = []
 
