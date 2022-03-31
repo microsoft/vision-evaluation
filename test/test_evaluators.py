@@ -536,10 +536,8 @@ class TestImageCaptionEvaluator(unittest.TestCase):
     predictions_file = pathlib.Path(__file__).resolve().parent / 'data' / 'image_caption_prediction.json'
     ground_truth_file = pathlib.Path(__file__).resolve().parent / 'data' / 'image_caption_gt.json'
     imcap_predictions, imcap_targets = [], []
-    with open(predictions_file, 'r') as f:
-        predictions_dict = json.load(f)
-    with open(ground_truth_file, 'r') as f:
-        ground_truth_dict = json.load(f)
+    predictions_dict = json.loads(predictions_file.read_text())
+    ground_truth_dict = json.loads(ground_truth_file.read_text())
 
     gts_by_id = {}
     predictions_by_id = {pred['image_id']: pred['caption'] for pred in predictions_dict}
