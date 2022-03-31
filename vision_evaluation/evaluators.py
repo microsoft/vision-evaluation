@@ -825,18 +825,7 @@ class MattingEvaluatorBase(Evaluator):
     """
     def __init__(self):
         super(MattingEvaluatorBase, self).__init__()
-        self.predictions = []
-        self.targets = []
         self.metric = None
-
-    def add_predictions(self, predictions, targets):
-        """ Adding predictions and ground truth of images for image matting task
-        Args:
-            predictions: list of image matting predictions, [matting1, matting2, ...], shape: (N, ), type: PIL image object or Numpy array
-            targets: list of image matting ground truth, [gt1, gt2, ...], shape: (N, ), type: PIL image object or Numpy array
-        """
-        self.targets += targets
-        self.predictions += predictions
 
     def reset(self):
         super(MattingEvaluatorBase, self).reset()
