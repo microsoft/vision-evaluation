@@ -831,6 +831,8 @@ class MattingEvaluatorBase(Evaluator):
 
     def reset(self):
         super(MattingEvaluatorBase, self).reset()
+        self._num_samples = 0
+        self._metric_sum = 0
 
     def _convert2binary(self, mask, threshold=128):
         bin_mask = mask >= 128
