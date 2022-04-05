@@ -1,0 +1,6 @@
+numpy
+sklearn
+pycocotools
+pycocoevalcap
+opencv-python-headless
+Pillow
