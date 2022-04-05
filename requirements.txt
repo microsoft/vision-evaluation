@@ -1,0 +1,5 @@
+numpy
+sklearn
+pycocotools
+pycocoevalcap
+install-jdk
