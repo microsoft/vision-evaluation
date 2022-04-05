@@ -823,9 +823,9 @@ class MattingEvaluatorBase(Evaluator):
     """
     Base class for image matting evaluator
     """
-    def __init__(self):
+    def __init__(self, metric):
         super(MattingEvaluatorBase, self).__init__()
-        self._metric = None
+        self._metric = metric
         self._num_samples = 0
         self._metric_sum = 0
 
@@ -871,9 +871,8 @@ class MeanIOUEvaluator(MattingEvaluatorBase):
     """
     Mean intersection-over-union evaluator
     """
-    def __init__(self):
-        super(MeanIOUEvaluator, self).__init__()
-        self._metric = 'mIOU'
+    def __init__(self, metric='mIOU'):
+        super(MeanIOUEvaluator, self).__init__(metric=metric)
 
     def add_predictions(self, predictions, targets):
         """ Adding predictions and ground truth of images for image matting task
@@ -898,9 +897,8 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
     """
     Foreground intersection-over-union evaluator
     """
-    def __init__(self):
-        super(ForegroundIOUEvaluator, self).__init__()
-        self._metric = 'fgIOU'
+    def __init__(self, metric='fgIOU'):
+        super(ForegroundIOUEvaluator, self).__init__(metric=metric)
 
     def add_predictions(self, predictions, targets):
         """ Adding predictions and ground truth of images for image matting task
@@ -929,8 +927,7 @@ class BoundaryMeanIOUEvaluator(MeanIOUEvaluator):
     Boundary mean intersection-over-union evaluator
     """
     def __init__(self):
-        super(BoundaryMeanIOUEvaluator, self).__init__()
-        self._metric = 'b_mIOU'
+        super(BoundaryMeanIOUEvaluator, self).__init__(metric='b_mIOU')
 
     def _preprocess(self, pred_mask, gt_mask):
         pred_mask = np.asarray(pred_mask)
@@ -947,8 +944,7 @@ class BoundaryForegroundIOUEvaluator(ForegroundIOUEvaluator):
     Boundary foreground intersection-over-union evaluator
     """
     def __init__(self):
-        super(BoundaryForegroundIOUEvaluator, self).__init__()
-        self._metric = 'b_fgIOU'
+        super(BoundaryForegroundIOUEvaluator, self).__init__(metric='b_fgIOU')
 
     def _preprocess(self, pred_mask, gt_mask):
         pred_mask = np.asarray(pred_mask)
@@ -965,8 +961,7 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
     L1 error evaluator
     """
     def __init__(self):
-        super(L1ErrorEvaluator, self).__init__()
-        self._metric = 'L1Err'
+        super(L1ErrorEvaluator, self).__init__(metric='L1Err')
 
     def add_predictions(self, predictions, targets):
         """ Adding predictions and ground truth of images for image matting task
