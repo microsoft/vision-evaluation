@@ -880,7 +880,6 @@ class MeanIOUEvaluator(MattingEvaluatorBase):
         Args:
             predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
             targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
-            convert_to_binary: flag to indicating whether to convert the mask to binary
         """
         num_class = 2
         self._num_samples += len(predictions)
@@ -903,12 +902,11 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
         super(ForegroundIOUEvaluator, self).__init__()
         self._metric = 'fgIOU'
 
-    def add_predictions(self, predictions, targets, convert_to_binary=True):
+    def add_predictions(self, predictions, targets):
         """ Adding predictions and ground truth of images for image matting task
         Args:
             predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
             targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
-            convert_to_binary: flag to indicating whether to convert the mask to binary
         """
         num_class = 2
         self._num_samples += len(predictions)
