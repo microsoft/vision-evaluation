@@ -834,8 +834,8 @@ class MattingEvaluatorBase(Evaluator):
         self._num_samples = 0
         self._metric_sum = 0
 
-    def _convert2binary(self, mask, threshold=128):
-        bin_mask = mask >= 128
+    def _convert2binary(self, mask, threshold):
+        bin_mask = mask >= threshold
         return bin_mask.astype(mask.dtype)
 
     def _preprocess(self, pred_mask, gt_mask):
