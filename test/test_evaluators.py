@@ -2,11 +2,12 @@ import unittest
 import numpy as np
 import json
 import pathlib
-import os
+from PIL import Image
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
-    CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator
+    CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, MeanIOUEvaluator, \
+    ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -531,13 +532,11 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
 
 
 class TestImageCaptionEvaluator(unittest.TestCase):
-    predictions_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'image_caption_prediction.json')
-    ground_truth_file = os.path.join(pathlib.Path(__file__).resolve().parent, 'image_caption_gt.json')
+    predictions_file = pathlib.Path(__file__).resolve().parent / 'data' / 'image_caption_prediction.json'
+    ground_truth_file = pathlib.Path(__file__).resolve().parent / 'data' / 'image_caption_gt.json'
     imcap_predictions, imcap_targets = [], []
-    with open(predictions_file, 'r') as f:
-        predictions_dict = json.load(f)
-    with open(ground_truth_file, 'r') as f:
-        ground_truth_dict = json.load(f)
+    predictions_dict = json.loads(predictions_file.read_text())
+    ground_truth_dict = json.loads(ground_truth_file.read_text())
 
     gts_by_id = {}
     predictions_by_id = {pred['image_id']: pred['caption'] for pred in predictions_dict}
@@ -639,3 +638,44 @@ class TestRocAucEvaluator(unittest.TestCase):
         assert roc_auc == 1.0
         roc_auc = self._get_metric(np.array(predictions), np.array(targets))
         assert roc_auc == 1.0
+
+
+class TestImageMattingEvaluator(unittest.TestCase):
+
+    image_matting_predictions = []
+    image_matting_targets = []
+
+    image_matting_predictions.append(Image.open(pathlib.Path(__file__).resolve().parent / 'data' / 'test_0.png'))
+    image_matting_predictions.append(Image.open(pathlib.Path(__file__).resolve().parent / 'data' / 'test_1.png'))
+    image_matting_targets.append(Image.open(pathlib.Path(__file__).resolve().parent / 'data' / 'gt_0.png'))
+    image_matting_targets.append(Image.open(pathlib.Path(__file__).resolve().parent / 'data' / 'gt_1.png'))
+
+    def test_image_matting_mean_iou_evaluator(self):
+        evaluator = MeanIOUEvaluator()
+        evaluator.add_predictions(predictions=self.image_matting_predictions, targets=self.image_matting_targets)
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report["mIOU"], 0.4530012134867148)
+
+    def test_image_matting_foreground_iou_evaluator(self):
+        evaluator = ForegroundIOUEvaluator()
+        evaluator.add_predictions(predictions=self.image_matting_predictions, targets=self.image_matting_targets)
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report["fgIOU"], 0.23992256209190865)
+
+    def test_image_matting_l1_error_evaluator(self):
+        evaluator = L1ErrorEvaluator()
+        evaluator.add_predictions(predictions=self.image_matting_predictions, targets=self.image_matting_targets)
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report["L1Err"], 77.07375)
+
+    def test_image_matting_boundary_mean_iou_evaluator(self):
+        evaluator = BoundaryMeanIOUEvaluator()
+        evaluator.add_predictions(predictions=self.image_matting_predictions, targets=self.image_matting_targets)
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report["b_mIOU"], 0.6022811774422807)
+
+    def test_image_matting_boundary_foreground_iou_evaluator(self):
+        evaluator = BoundaryForegroundIOUEvaluator()
+        evaluator.add_predictions(predictions=self.image_matting_predictions, targets=self.image_matting_targets)
+        report = evaluator.get_report()
+        self.assertAlmostEqual(report["b_fgIOU"], 0.2460145344436508)

@@ -5,6 +5,7 @@ import sklearn.metrics as sm
 import numpy as np
 from abc import ABC, abstractmethod
 
+import cv2
 from pycocotools.cocoeval import Params, COCOeval
 from sklearn.metrics import balanced_accuracy_score
 
@@ -816,3 +817,170 @@ class SPICEScoreEvaluator(ImageCaptionEvaluatorBase):
         super().__init__(metric='SPICE')
         self.predictions = []
         self.targets = []
+
+
+class MattingEvaluatorBase(Evaluator):
+    """
+    Base class for image matting evaluator
+    """
+    def __init__(self, metric):
+        super(MattingEvaluatorBase, self).__init__()
+        self._metric = metric
+        self._num_samples = 0
+        self._metric_sum = 0
+
+    def reset(self):
+        super(MattingEvaluatorBase, self).reset()
+        self._num_samples = 0
+        self._metric_sum = 0
+
+    def _convert2binary(self, mask, threshold=128):
+        bin_mask = mask >= threshold
+        return bin_mask.astype(mask.dtype)
+
+    def _preprocess(self, pred_mask, gt_mask):
+        pred_mask = np.asarray(pred_mask)
+        gt_mask = np.asarray(gt_mask)
+        pred_binmask = self._convert2binary(pred_mask)
+        gt_binmask = self._convert2binary(gt_mask)
+        return pred_binmask, gt_binmask
+
+    def _find_contours(self, matting, thickness=10):
+        matting = np.copy(matting)
+        opencv_major_version = int(cv2.__version__.split('.')[0])
+        if opencv_major_version >= 4:
+            contours, _ = cv2.findContours(matting, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        else:
+            _, contours, _ = cv2.findContours(matting, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        mask = np.zeros(matting.shape, np.uint8)
+
+        cv2.drawContours(mask, contours, -1, 255, thickness)
+        return mask
+
+    def _create_contour_mask(self, gt_mask, pred_mask, line_width=10):
+        contour_mask = self._find_contours((gt_mask * 255).astype('uint8'), thickness=line_width) / 255.0
+        gt_contour_mask = gt_mask * contour_mask
+        pred_contour_mask = pred_mask * contour_mask
+        return gt_contour_mask, pred_contour_mask
+
+    def get_report(self):
+        return {self._metric: self._metric_sum / self._num_samples if self._num_samples else 0.0}
+
+
+class MeanIOUEvaluator(MattingEvaluatorBase):
+    """
+    Mean intersection-over-union evaluator
+    """
+    def __init__(self, metric='mIOU'):
+        super(MeanIOUEvaluator, self).__init__(metric=metric)
+
+    def add_predictions(self, predictions, targets):
+        """ Adding predictions and ground truth of images for image matting task
+        Args:
+            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
+            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
+        """
+
+        assert len(predictions) == len(targets)
+
+        num_class = 2
+        self._num_samples += len(predictions)
+        for pred_mask, gt_mask in zip(predictions, targets):
+            pred_binmask, gt_binmask = self._preprocess(pred_mask, gt_mask)
+            label = num_class * gt_binmask.astype('int') + pred_binmask
+            count = np.bincount(label.flatten(), minlength=num_class**2)
+            confusion_matrix = count.reshape(num_class, num_class)
+            iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix) + 1e-10)
+            valid = confusion_matrix.sum(axis=1) > 0
+            mean_iou_per_image = np.nanmean(iou[valid])
+            self._metric_sum += mean_iou_per_image
+
+
+class ForegroundIOUEvaluator(MattingEvaluatorBase):
+    """
+    Foreground intersection-over-union evaluator
+    """
+    def __init__(self, metric='fgIOU'):
+        super(ForegroundIOUEvaluator, self).__init__(metric=metric)
+
+    def add_predictions(self, predictions, targets):
+        """ Adding predictions and ground truth of images for image matting task
+        Args:
+            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
+            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
+        """
+
+        assert len(predictions) == len(targets)
+
+        num_class = 2
+        self._num_samples += len(predictions)
+        for pred_mask, gt_mask in zip(predictions, targets):
+            pred_binmask, gt_binmask = self._preprocess(pred_mask, gt_mask)
+            if np.all(gt_binmask == 0):
+                res = 1 if np.all(pred_binmask == 0) else 0
+                self.metric_sum += res
+                continue
+
+            label = num_class * gt_binmask.astype('int') + pred_binmask
+            count = np.bincount(label.flatten(), minlength=num_class**2)
+            confusion_matrix = count.reshape(num_class, num_class)
+            iou = np.diag(confusion_matrix) / (confusion_matrix.sum(axis=1) + confusion_matrix.sum(axis=0) - np.diag(confusion_matrix) + 1e-10)
+            self._metric_sum += iou[1]
+
+
+class BoundaryMeanIOUEvaluator(MeanIOUEvaluator):
+    """
+    Boundary mean intersection-over-union evaluator
+    """
+    def __init__(self):
+        super(BoundaryMeanIOUEvaluator, self).__init__(metric='b_mIOU')
+
+    def _preprocess(self, pred_mask, gt_mask):
+        pred_mask = np.asarray(pred_mask)
+        gt_mask = np.asarray(gt_mask)
+        pred_binmask = self._convert2binary(pred_mask)
+        gt_binmask = self._convert2binary(gt_mask)
+        gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
+
+        return pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64)
+
+
+class BoundaryForegroundIOUEvaluator(ForegroundIOUEvaluator):
+    """
+    Boundary foreground intersection-over-union evaluator
+    """
+    def __init__(self):
+        super(BoundaryForegroundIOUEvaluator, self).__init__(metric='b_fgIOU')
+
+    def _preprocess(self, pred_mask, gt_mask):
+        pred_mask = np.asarray(pred_mask)
+        gt_mask = np.asarray(gt_mask)
+        pred_binmask = self._convert2binary(pred_mask)
+        gt_binmask = self._convert2binary(gt_mask)
+        gt_boundary_mask, pred_boundary_mask = self._create_contour_mask(gt_binmask, pred_binmask)
+
+        return pred_boundary_mask.astype(np.int64), gt_boundary_mask.astype(np.int64)
+
+
+class L1ErrorEvaluator(MattingEvaluatorBase):
+    """
+    L1 error evaluator
+    """
+    def __init__(self):
+        super(L1ErrorEvaluator, self).__init__(metric='L1Err')
+
+    def add_predictions(self, predictions, targets):
+        """ Adding predictions and ground truth of images for image matting task
+        Args:
+            predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
+            targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
+        """
+
+        assert len(predictions) == len(targets)
+
+        self._num_samples += len(predictions)
+        for pred_mask, gt_mask in zip(predictions, targets):
+            pred_mask = np.asarray(pred_mask)
+            gt_mask = np.asarray(gt_mask)
+            mean_l1 = np.abs(pred_mask.astype(np.float)-gt_mask.astype(np.float)).mean()
+            self._metric_sum += mean_l1

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, and image caption.
+This repo contains evaluation metric codes used in Microsoft Cognitive Services Computer Vision for tasks such as classification, object detection, image caption, and image matting.
 
 If you only need the image classification or object detection evaluation pipeline, JRE is not required.
 This repo
@@ -33,13 +33,20 @@ This repo currently offers evaluation metrics for three vision tasks:
   - `ROUGELScoreEvaluator`: computes the Rouge-L score. Refer to [ROUGE: A Package for Automatic Evaluation of Summaries](http://anthology.aclweb.org/W/W04/W04-1013.pdf) for more details.
   - `CIDErScoreEvaluator`:  computes the CIDEr score. Refer to [CIDEr: Consensus-based Image Description Evaluation](http://arxiv.org/pdf/1411.5726.pdf) for more details.
   - `SPICEScoreEvaluator`:  computes the SPICE score. Refer to [SPICE: Semantic Propositional Image Caption Evaluation](https://arxiv.org/abs/1607.08822) for more details.
-
+- **Image matting**:
+  - `MeanIOUEvaluator`: computes the mean intersection-over-union score. 
+  - `ForegroundIOUEvaluator`: computes the foreground intersection-over-union evaluator score.
+  - `BoundaryMeanIOUEvaluator`: computes the boundary mean intersection-over-union score. 
+  - `BoundaryForegroundIOUEvaluator`:  computes the boundary foreground intersection-over-union score.
+  - `L1ErrorEvaluator`:  computes the L1 error.
+  
 While different machine learning problems/applications prefer different metrics, below are some general recommendations:
 
 - **Multiclass classification**: Top-1 accuracy and Top-5 accuracy
 - **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
 - **Object detection**: mAP@IoU=30 and mAP@IoU=50
 - **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
+- **Image matting**: mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
 
 ## Additional Requirements
 
