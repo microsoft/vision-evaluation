@@ -880,6 +880,9 @@ class MeanIOUEvaluator(MattingEvaluatorBase):
             predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
             targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
         """
+
+        assert len(predictions) == len(targets)
+
         num_class = 2
         self._num_samples += len(predictions)
         for pred_mask, gt_mask in zip(predictions, targets):
@@ -906,6 +909,9 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
             predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
             targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
         """
+
+        assert len(predictions) == len(targets)
+
         num_class = 2
         self._num_samples += len(predictions)
         for pred_mask, gt_mask in zip(predictions, targets):
@@ -969,6 +975,9 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
             predictions: list of image matting predictions, [matting1, matting2, ...]. Shape: (N, ), type: PIL image object
             targets: list of image matting ground truth, [gt1, gt2, ...]. Shape: (N, ), type: PIL image object
         """
+
+        assert len(predictions) == len(targets)
+
         self._num_samples += len(predictions)
         for pred_mask, gt_mask in zip(predictions, targets):
             pred_mask = np.asarray(pred_mask)
