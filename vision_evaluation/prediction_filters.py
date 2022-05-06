@@ -36,7 +36,14 @@ class TopKPredictionFilter(PredictionFilter):
         """
 
         k = min(predictions.shape[1], self.k)
-        top_k_pred_indices = np.argsort(-predictions, axis=1)[:, :k]
+        if k == 0:
+            top_k_pred_indices = np.array([[] for i in range(predictions.shape[1])], dtype=int)
+        elif k == 1:
+            top_k_pred_indices = np.argmax(predictions, axis=1)
+            top_k_pred_indices = top_k_pred_indices.reshape((-1, 1))
+        else:
+            top_k_pred_indices = np.argpartition(predictions, -k, axis=1)[:, -k:]
+
         if return_mode == 'indices':
             return list(top_k_pred_indices)
         else:

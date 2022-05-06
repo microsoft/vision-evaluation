@@ -13,6 +13,13 @@ from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 from functools import reduce
 
 
+def _indices_to_vec(indices, length):
+    target_vec = np.zeros(length, dtype=int)
+    target_vec[indices] = 1
+
+    return target_vec
+
+
 def _targets_to_mat(targets, n_class):
     if len(targets.shape) == 1:
         target_mat = np.zeros((len(targets), n_class), dtype=int)
@@ -90,18 +97,17 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
 
         assert len(predictions) == len(targets)
 
-        target_mat = _targets_to_mat(targets, predictions.shape[1])
         predictions = self.prediction_filter.filter(predictions, 'vec') if self.prediction_filter else predictions
 
         if self.all_predictions.size != 0:
             self.all_predictions = np.append(self.all_predictions, predictions, axis=0)
         else:
-            self.all_predictions = np.copy(predictions)
+            self.all_predictions = predictions.copy()
 
         if self.all_targets.size != 0:
-            self.all_targets = np.append(self.all_targets, target_mat, axis=0)
+            self.all_targets = np.append(self.all_targets, targets, axis=0)
         else:
-            self.all_targets = np.copy(target_mat)
+            self.all_targets = targets.copy()
 
     def calculate_score(self, average='macro'):
         """
@@ -121,12 +127,16 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         ``'samples'``:
             Calculate metrics for each instance, and find their average.
         """
-        assert self.all_targets.size == self.all_predictions.size
+        if self.all_predictions.size == 0:
+            return 0.0
+
+        tar_mat = _targets_to_mat(self.all_targets, self.all_predictions.shape[1])
+        assert tar_mat.size == self.all_predictions.size
         result = 0.0
-        if self.all_targets.size > 0:
-            non_empty_idx = np.where(np.invert(np.all(self.all_targets == 0, axis=0)))[0]
+        if tar_mat.size > 0:
+            non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0]
             if non_empty_idx.size != 0:
-                result = self._calculate(self.all_targets[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
+                result = self._calculate(tar_mat[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
 
         return result
 
@@ -281,6 +291,27 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
 
     def _get_id(self):
         return 'average_precision'
+
+    def calculate_score(self, average='macro'):
+        if average != 'macro':
+            return super().calculate_score(average)
+
+        ap = 0.0
+        n_class_with_gt = 0
+        if self.all_targets.size > 0:
+            c_to_sample_indices = dict()
+            for i, t in enumerate(self.all_targets):
+                c_to_sample_indices.setdefault(t, []).append(i)
+
+            for i in range(self.all_predictions.shape[1]):
+                if i not in c_to_sample_indices:
+                    continue
+                class_tar_vec = _indices_to_vec(c_to_sample_indices[i], self.all_targets.size)
+
+                ap += sm.average_precision_score(class_tar_vec, self.all_predictions[:, i])
+                n_class_with_gt += 1
+
+        return ap / n_class_with_gt if n_class_with_gt > 0 else 0.0
 
     def _calculate(self, targets, predictions, average):
         return sm.average_precision_score(targets, predictions, average=average)
