@@ -1,4 +1,3 @@
-from tokenize import Ignore
 import unittest
 import numpy as np
 import json
