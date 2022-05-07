@@ -12,60 +12,85 @@ from vision_evaluation.prediction_filters import TopKPredictionFilter, Threshold
 
 
 class TestClassificationEvaluator(unittest.TestCase):
-    TARGETS = np.array([1, 0, 0, 0, 1, 1, 0, 0, 0, 1])
-    PREDICTIONS = np.array([[1, 0],
-                            [0, 1],
-                            [0.5, 0.5],
-                            [0.1, 0.9],
-                            [0.44, 0.56],
-                            [0.09, 0.91],
-                            [0.91, 0.09],
-                            [0.37, 0.63],
-                            [0.34, 0.66],
-                            [0.89, 0.11]])
+    TARGETS = [
+        np.array([1, 0, 0, 0, 1, 1, 0, 0, 0, 1]),
+        np.array([1, 0, 2, 0, 1, 2, 0, 0, 0, 1, 2, 1, 2, 2, 0])]
+    PREDICTIONS = [
+        np.array([[1, 0],
+                  [0, 1],
+                  [0.5, 0.5],
+                  [0.1, 0.9],
+                  [0.44, 0.56],
+                  [0.09, 0.91],
+                  [0.91, 0.09],
+                  [0.37, 0.63],
+                  [0.34, 0.66],
+                  [0.89, 0.11]]),
+        np.array([[0.99, 0.01, 0],
+                  [0, 0.99, 0.01],
+                  [0.51, 0.49, 0.0],
+                  [0.09, 0.8, 0.11],
+                  [0.34, 0.36, 0.3],
+                  [0.09, 0.90, 0.01],
+                  [0.91, 0.06, 0.03],
+                  [0.37, 0.60, 0.03],
+                  [0.34, 0.46, 0.2],
+                  [0.79, 0.11, 0.1],
+                  [0.34, 0.16, 0.5],
+                  [0.04, 0.56, 0.4],
+                  [0.04, 0.36, 0.6],
+                  [0.04, 0.36, 0.6],
+                  [0.99, 0.01, 0.0]])]
 
     def test_top_k_accuracy_evaluator(self):
-        top1_acc_evaluator = TopKAccuracyEvaluator(1)
-        top1_acc_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-
-        top5_acc_evaluator = TopKAccuracyEvaluator(5)
-        top5_acc_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-
-        self.assertEqual(top1_acc_evaluator.get_report()["accuracy_top1"], 0.4)
-        self.assertEqual(top5_acc_evaluator.get_report()["accuracy_top5"], 1.0)
+        gts = [[0.4, 1.0, 1.0], [0.4666666, 0.7333333, 1.0]]
+        for k_idx, top_k in enumerate([1, 2, 5]):
+            for i, (targets, predictions) in enumerate(zip(self.TARGETS, self.PREDICTIONS)):
+                eval = TopKAccuracyEvaluator(top_k)
+                eval.add_predictions(predictions, targets)
+                top_k_acc = eval.get_report()[f"accuracy_top{top_k}"]
+                import sklearn.metrics as sm
+                if predictions.shape[1] == 2:
+                    predictions = predictions[:, 1]
+                self.assertAlmostEqual(sm.top_k_accuracy_score(targets, predictions, k=top_k), top_k_acc)
+                self.assertAlmostEqual(top_k_acc, gts[i][k_idx], places=5)
 
     def test_top_1_accuracy_evaluator_equivalent_to_top1_precision_eval(self):
-        top1_acc_evaluator = TopKAccuracyEvaluator(1)
-        top1_acc_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
+        for targets, predictions in zip(self.TARGETS, self.PREDICTIONS):
+            top1_acc_evaluator = TopKAccuracyEvaluator(1)
+            top1_acc_evaluator.add_predictions(predictions, targets)
 
-        top1_prec_evaluator = PrecisionEvaluator(TopKPredictionFilter(1))
-        top1_prec_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
+            top1_prec_evaluator = PrecisionEvaluator(TopKPredictionFilter(1))
+            top1_prec_evaluator.add_predictions(predictions, targets)
 
-        self.assertEqual(top1_acc_evaluator.get_report()["accuracy_top1"], top1_prec_evaluator.get_report(average='samples')['precision_top1'])
+            self.assertEqual(top1_acc_evaluator.get_report()["accuracy_top1"], top1_prec_evaluator.get_report(average='samples')['precision_top1'])
 
     def test_average_precision_evaluator(self):
-        evaluator = AveragePrecisionEvaluator()
-        evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        self.assertAlmostEqual(evaluator.get_report(average='micro')["average_precision"], 0.447682, places=5)
-        self.assertAlmostEqual(evaluator.get_report(average='macro')["average_precision"], 0.475744, places=5)
+        gts = [[0.447682, 0.475744, 0.490476190, 0.65], [0.384352058, 0.485592, 0.50326599, 0.6888888]]
+        for i, (targets, predictions) in enumerate(zip(self.TARGETS, self.PREDICTIONS)):
+            evaluator = AveragePrecisionEvaluator()
+            evaluator.add_predictions(predictions, targets)
+            for fl_i, flavor in enumerate(['micro', 'macro', 'weighted', 'samples']):
+                self.assertAlmostEqual(evaluator.get_report(average=flavor)['average_precision'], gts[i][fl_i], places=5)
 
     def test_ece_loss_evaluator(self):
-        evaluator = EceLossEvaluator()
-        evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        self.assertEqual(evaluator.get_report()["calibration_ece"], 0.584)
+        gts = [0.584, 0.40800000]
+        for i, (targets, predictions) in enumerate(zip(self.TARGETS, self.PREDICTIONS)):
+            evaluator = EceLossEvaluator()
+            evaluator.add_predictions(predictions, targets)
+            self.assertAlmostEqual(evaluator.get_report()["calibration_ece"], gts[i], places=5)
 
     def test_threshold_accuracy_evaluator(self):
-        thresh03_evaluator = ThresholdAccuracyEvaluator(0.3)
-        thresh03_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        self.assertEqual(thresh03_evaluator.get_report()["accuracy_thres=0.3"], 0.4)
-
-        thresh05_evaluator = ThresholdAccuracyEvaluator(0.5)
-        thresh05_evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
-        self.assertEqual(thresh05_evaluator.get_report()["accuracy_thres=0.5"], 0.35)
+        gts = [[0.4, 0.35, 0.2], [0.355555, 0.4, 0.133333]]
+        for i, (targets, predictions) in enumerate(zip(self.TARGETS, self.PREDICTIONS)):
+            for j, threshold in enumerate(['0.3', '0.5', '0.7']):
+                thresh03_evaluator = ThresholdAccuracyEvaluator(float(threshold))
+                thresh03_evaluator.add_predictions(predictions, targets)
+                self.assertAlmostEqual(thresh03_evaluator.get_report()[f"accuracy_thres={threshold}"], gts[i][j], places=5)
 
     def test_perclass_accuracy_evaluator(self):
         evaluator = TagWiseAccuracyEvaluator()
-        evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
+        evaluator.add_predictions(self.PREDICTIONS[0], self.TARGETS[0])
         result = evaluator.get_report()
         self.assertAlmostEqual(result['tag_wise_accuracy'][0], 0.33333, 5)
         self.assertEqual(result['tag_wise_accuracy'][1], 0.5)
@@ -86,7 +111,7 @@ class TestClassificationEvaluator(unittest.TestCase):
 
     def test_perclass_average_precision_evaluator(self):
         evaluator = TagWiseAveragePrecisionEvaluator()
-        evaluator.add_predictions(self.PREDICTIONS, self.TARGETS)
+        evaluator.add_predictions(self.PREDICTIONS[0], self.TARGETS[0])
         result = evaluator.get_report()
         self.assertAlmostEqual(result['tag_wise_average_precision'][0], 0.54940, 5)
         self.assertAlmostEqual(result['tag_wise_average_precision'][1], 0.40208, 5)

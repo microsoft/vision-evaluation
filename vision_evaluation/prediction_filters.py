@@ -18,11 +18,13 @@ class PredictionFilter(ABC):
 
 class TopKPredictionFilter(PredictionFilter):
 
-    def __init__(self, k):
+    def __init__(self, k: int):
         """
         Args:
             k: k predictions with highest confidence
         """
+        assert k >= 0
+
         self.k = k
 
     def filter(self, predictions, return_mode):
@@ -36,7 +38,14 @@ class TopKPredictionFilter(PredictionFilter):
         """
 
         k = min(predictions.shape[1], self.k)
-        top_k_pred_indices = np.argsort(-predictions, axis=1)[:, :k]
+        if k == 0:
+            top_k_pred_indices = np.array([[] for i in range(predictions.shape[1])], dtype=int)
+        elif k == 1:
+            top_k_pred_indices = np.argmax(predictions, axis=1)
+            top_k_pred_indices = top_k_pred_indices.reshape((-1, 1))
+        else:
+            top_k_pred_indices = np.argpartition(predictions, -k, axis=1)[:, -k:]
+
         if return_mode == 'indices':
             return list(top_k_pred_indices)
         else:
@@ -53,11 +62,12 @@ class TopKPredictionFilter(PredictionFilter):
 
 
 class ThresholdPredictionFilter(PredictionFilter):
-    def __init__(self, threshold):
+    def __init__(self, threshold: float):
         """
         Args:
             threshold: confidence threshold
         """
+
         self.threshold = threshold
 
     def filter(self, predictions, return_mode):
