@@ -158,7 +158,8 @@ class TopKAccuracyEvaluator(Evaluator):
     Top k accuracy evaluator for multiclass classification
     """
 
-    def __init__(self, k):
+    def __init__(self, k: int):
+        assert k > 0
         self.total_num = 0
         self.topk_correct_num = 0
 
@@ -854,6 +855,7 @@ class MattingEvaluatorBase(Evaluator):
     """
     Base class for image matting evaluator
     """
+
     def __init__(self, metric):
         super(MattingEvaluatorBase, self).__init__()
         self._metric = metric
@@ -902,6 +904,7 @@ class MeanIOUEvaluator(MattingEvaluatorBase):
     """
     Mean intersection-over-union evaluator
     """
+
     def __init__(self, metric='mIOU'):
         super(MeanIOUEvaluator, self).__init__(metric=metric)
 
@@ -931,6 +934,7 @@ class ForegroundIOUEvaluator(MattingEvaluatorBase):
     """
     Foreground intersection-over-union evaluator
     """
+
     def __init__(self, metric='fgIOU'):
         super(ForegroundIOUEvaluator, self).__init__(metric=metric)
 
@@ -963,6 +967,7 @@ class BoundaryMeanIOUEvaluator(MeanIOUEvaluator):
     """
     Boundary mean intersection-over-union evaluator
     """
+
     def __init__(self):
         super(BoundaryMeanIOUEvaluator, self).__init__(metric='b_mIOU')
 
@@ -980,6 +985,7 @@ class BoundaryForegroundIOUEvaluator(ForegroundIOUEvaluator):
     """
     Boundary foreground intersection-over-union evaluator
     """
+
     def __init__(self):
         super(BoundaryForegroundIOUEvaluator, self).__init__(metric='b_fgIOU')
 
@@ -997,6 +1003,7 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
     """
     L1 error evaluator
     """
+
     def __init__(self):
         super(L1ErrorEvaluator, self).__init__(metric='L1Err')
 

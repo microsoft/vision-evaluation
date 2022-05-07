@@ -18,11 +18,13 @@ class PredictionFilter(ABC):
 
 class TopKPredictionFilter(PredictionFilter):
 
-    def __init__(self, k):
+    def __init__(self, k: int):
         """
         Args:
             k: k predictions with highest confidence
         """
+        assert k >= 0
+
         self.k = k
 
     def filter(self, predictions, return_mode):
@@ -60,11 +62,12 @@ class TopKPredictionFilter(PredictionFilter):
 
 
 class ThresholdPredictionFilter(PredictionFilter):
-    def __init__(self, threshold):
+    def __init__(self, threshold: float):
         """
         Args:
             threshold: confidence threshold
         """
+
         self.threshold = threshold
 
     def filter(self, predictions, return_mode):
