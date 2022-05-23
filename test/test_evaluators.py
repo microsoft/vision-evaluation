@@ -555,6 +555,37 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
         self.assertEqual(report["mAP_50"], 0.0)
         self.assertTrue(isinstance(report["mAP_50"], float))
 
+    def test_cat_id_remap(self):
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.2, 0.5], coordinates='relative')
+
+        predictions = [[[0, 1.0, 0, 0, 1, 1],
+                        [1, 1.0, 0.5, 0.5, 1, 1],
+                        [2, 1.0, 0.1, 0.1, 0.5, 0.5]]]
+
+        targets = [[[0, 0, 0, 1, 1],
+                    [0, 0.5, 0.5, 1, 1],
+                    [2, 0.1, 0.1, 0.5, 0.5]]]
+
+        evaluator.add_predictions(predictions, targets)
+        report = evaluator.get_report()
+
+        # Reorder the cat ids so that the target cat ids are continuous: 0->0, 2->1, 1(category not shown in targets)->2
+        evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.2, 0.5], coordinates='relative')
+
+        predictions_remap_cat_id = [[[0, 1.0, 0, 0, 1, 1],
+                                     [2, 1.0, 0.5, 0.5, 1, 1],
+                                     [1, 1.0, 0.1, 0.1, 0.5, 0.5]]]
+
+        targets_remap_cat_id = [[[0, 0, 0, 1, 1],
+                                 [0, 0.5, 0.5, 1, 1],
+                                 [1, 0.1, 0.1, 0.5, 0.5]]]
+
+        evaluator.add_predictions(predictions_remap_cat_id, targets_remap_cat_id)
+        report_remap_cat_id = evaluator.get_report()
+
+        for k in report.keys():
+            self.assertEqual(report[k], report_remap_cat_id[k])
+
 
 class TestImageCaptionEvaluator(unittest.TestCase):
     predictions_file = pathlib.Path(__file__).resolve().parent / 'data' / 'image_caption_prediction.json'
