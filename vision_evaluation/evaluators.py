@@ -686,7 +686,31 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
             mean_s = np.mean(s[s > -1])
         return mean_s
 
+    def remap_cat_ids(self):
+        """Map target category ids to continuous ones to avoid the index overflow issue during coco mAP computation.
+           Then any predicted category ids not shown in targets will be appended. e.g. targets:[0,2,4], predictions:[0,1,2,3],
+           the category ids are remapped as 0->0, 2->1, 4->2, 1(not shown in targets)->3, 3(not shown in targets)->4"""
+
+        # Create the map.
+        target_cat_ids = set([b[0] for bboxes in self.targets for b in bboxes])
+        predict_cat_ids = set([b[0] for bboxes in self.predictions for b in bboxes])
+        cate_id_new_to_old = sorted(list(target_cat_ids)) + sorted(list(predict_cat_ids - target_cat_ids))
+        cate_id_old_to_new = {o: n for n, o in enumerate(cate_id_new_to_old)}
+
+        # Apply the map.
+        def _apply_cate_id_map(gt_or_pred):
+            for bboxes in gt_or_pred:
+                for bbox in bboxes:
+                    bbox[0] = cate_id_old_to_new[bbox[0]]
+
+        _apply_cate_id_map(self.targets)
+        _apply_cate_id_map(self.predictions)
+
+        # Return the new id to old id map.
+        return cate_id_new_to_old
+
     def get_report(self, **kwargs):
+        cat_id_new_to_old_map = self.remap_cat_ids()
         coco_eval_result = self._coco_eval()
         report = {'avg_mAP': self._summarize(coco_eval_result, 1, maxDets=coco_eval_result.params.maxDets[-1])}
         # mAP for each iou
@@ -695,8 +719,8 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
         # tag-wise mAP
         for iou, iou_report_tag_wise in zip(coco_eval_result.params.iouThrs, self.report_tag_wise):
             if iou_report_tag_wise:
-                report[f'tag_wise_AP_{int(iou * 100)}'] = [self._summarize(coco_eval_result, 1, iou, maxDets=coco_eval_result.params.maxDets[-1], catId=cat_id) for cat_id in
-                                                           coco_eval_result.params.catIds]
+                report[f'tag_wise_AP_{int(iou * 100)}'] = {cat_id_new_to_old_map[cat_id]: self._summarize(coco_eval_result, 1, iou, maxDets=coco_eval_result.params.maxDets[-1], catId=cat_id)
+                                                           for cat_id in coco_eval_result.params.catIds}
 
         return report
 
