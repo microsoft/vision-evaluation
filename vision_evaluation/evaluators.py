@@ -692,13 +692,10 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
            the category ids are remapped as 0->0, 2->1, 4->2, 1(not shown in targets)->3, 3(not shown in targets)->4"""
 
         # Create the map.
-        target_cat_ids = np.unique([bbox[0] for bboxes in self.targets for bbox in bboxes])
-        predict_cat_ids = np.unique([bbox[0] for bboxes in self.predictions for bbox in bboxes])
-        cate_id_old_to_new = {cate_id: idx for idx, cate_id in enumerate(target_cat_ids)}
-
-        for cate_id in predict_cat_ids:
-            if cate_id not in cate_id_old_to_new:
-                cate_id_old_to_new[cate_id] = len(cate_id_old_to_new)
+        target_cat_ids = set([b[0] for bboxes in self.targets for b in bboxes])
+        predict_cat_ids = set([b[0] for bboxes in self.predictions for b in bboxes])
+        cate_id_new_to_old = sorted(list(target_cat_ids)) + sorted(list(predict_cat_ids - target_cat_ids))
+        cate_id_old_to_new = {o: n for n, o in enumerate(cate_id_new_to_old)}
 
         # Apply the map.
         def _apply_cate_id_map(gt_or_pred):
@@ -710,9 +707,6 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
         _apply_cate_id_map(self.predictions)
 
         # Return the new id to old id map.
-        cate_id_new_to_old = [None] * len(cate_id_old_to_new)
-        for old_id, new_id in cate_id_old_to_new.items():
-            cate_id_new_to_old[new_id] = old_id
         return cate_id_new_to_old
 
     def get_report(self, **kwargs):
