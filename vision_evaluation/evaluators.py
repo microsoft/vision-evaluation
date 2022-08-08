@@ -1054,99 +1054,56 @@ class GroupWiseEvaluator(Evaluator):
     Group Wise Evaluator
     """
 
-    def __init__(self, evaluator, task_name, group_name,
-                 multitask_manifest_dataset, target_task_predictions):
-        """
-        Args:
-            evaluator (vision_evaluation.Evaluator): Evaluation class object. E.g. TopKAccuracyEvaluator()
-
-            manifest_dataset (ManifestDataset): Iterable multitask ManifestDataset object.
-
-            target_task_predictions (N, num_class):  Model output numpy array for the target task.
-
-            task_name (Str):  Target attribute used for the classification task. E.g. "gender"
-
-            group_name (Str): Attribute for slicing samples. E.g. "ethnicity"
-        """
-
-        self.task_name = task_name
-        self.group_name = group_name
-        self.manifest_dataset = multitask_manifest_dataset
-        self.target_task_predictions = target_task_predictions
+    def __init__(self, evaluator):
+        super().__init__()
         self.evaluator = evaluator
 
-        # Sanity Checks
-        assert len(self.manifest_dataset) == len(self.target_task_predictions)
-        assert isinstance(self.task_name, str)
-        assert isinstance(self.group_name, str)
+    def _group_by(self):
+        """
+            Group predictions and targets by target_task and group labels.
+            Example: IC on target_task = 'ethnicity' and group = 'gender'
 
-    def group_by(self):
-        """Group ground truth and predictions by task and group names.
+            store dict will save target labels and predictions corresponding to each group label.
 
-            Example:
-
-            store = {
-                (cls, grp): {
-                    'idx' : [idx1, idx2, ...],
-                    'targets': [t1, t2, ...],
-                    'predictions': [p1, p2, ...]
-                }
-            }
-
-            cls: task label
-            grp: group label
-            idx: list of sample indices corresponding to a particular (cls, grp)
-            targets: list of ground truth labels corresponding to a particular (cls, grp)
-            predictions: list of predicted labels corresponding to a particular (cls, grp). p1 shape (1, num_class)
-
-            Sample target in the manifest_dataset:
-                {'target_task': [class_label], 'group_name1',[], 'group_name2', [], ...}
-
+            store = {(target_task, group) : {
+                "targets":[]
+                "predictions":[]
+            }}
         """
 
-        # Step1: Sample datapoints by target_task and groups and save in store dict
         self.store = collections.defaultdict(
             lambda: collections.defaultdict(list))
 
-        for _, targets, sample_idx in self.manifest_dataset:
-
-            cls = targets[self.task_name][0]
-            grp = targets[self.group_name][0]
-
-            self.store[(cls, grp)]['idx'].append(sample_idx)
-            self.store[(cls, grp)]['targets'].append(cls)
-            self.store[(cls, grp)]['predictions'].append(
-                self.target_task_predictions[int(sample_idx)])
-
-    def reset(self):
-        self.evaluator.reset()
+        for (target_task, group), prediction in zip(self.targets, self.predictions):
+            self.store[(target_task, group)]['predictions'].append(prediction)
+            self.store[(target_task, group)]['targets'].append(target_task)
 
     def add_predictions(self, predictions, targets):
-        self.evaluator.add_predictions(predictions, targets)
-
-    def get_report(self):
-        """Report the metric for each group for the given task.
-
-        Returns:
-            matric (dict): {(target_class_label, group_label): metric}
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: the model output numpy array. Shape (N, num_class)
+            targets: the golden truths. Shape (N,2). The first column is the target_task and the second column is the group label.
         """
 
-        # Step 1: Call group_by() and create store dict.
-        self.group_by()
+        assert len(predictions) == len(targets)
+        self.targets = targets
+        self.predictions = predictions
+
+    def get_report(self):
+
+        # Step 1: Group targets and predictions by target_task and group
+        self._group_by()
 
         # Step 2: For each combination of target_task and group labels, compute the metric as per the given evaluator.
         self.metrics = collections.defaultdict()
 
-        for (cls, grp), samples in self.store.items():
+        for (target_task, group), samples in self.store.items():
 
-            predictions = np.array(samples['predictions'])
-            targets = np.array(samples['targets'])
+            _predictions = np.array(samples['predictions'])
+            _targets = np.array(samples['targets'])
 
-            # Reset the evaluator for each combination of target_task and group labels.
-            self.reset()
-            self.add_predictions(predictions, targets)
-
-            self.metrics[(cls, grp)] = self.evaluator.get_report(
+            self.evaluator.add_predictions(_predictions, _targets)
+            self.metrics[(target_task, group)] = self.evaluator.get_report(
                 average='macro')
 
         return self.metrics
