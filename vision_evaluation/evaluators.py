@@ -1048,7 +1048,6 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
             self._metric_sum += mean_l1
 
 
-
 class GroupWiseEvaluator(Evaluator):
     """
     Group wise evaluator: calculates metrics for the provided evaluator for each target class and group class separately.
@@ -1091,7 +1090,20 @@ class GroupWiseEvaluator(Evaluator):
             self.store = collections.defaultdict(
                 lambda: collections.defaultdict(list))
 
-        self._store_by_group()
+        for (target_task, group), prediction in zip(self.targets, self.predictions):
+            self.store[(target_task, group)]['predictions'].append(prediction)
+            self.store[(target_task, group)]['targets'].append(target_task)
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: the model output numpy array. Shape (N, num_class)
+            targets: the golden truths. Shape (N,2). The first column is the target_task and the second column is the group label.
+        """
+
+        assert len(predictions) == len(targets)
+        self.targets = targets
+        self.predictions = predictions
 
     def get_report(self):
 
@@ -1108,3 +1120,4 @@ class GroupWiseEvaluator(Evaluator):
                 average='macro')
 
         return {self._get_id(): dict(metrics)}
+    
