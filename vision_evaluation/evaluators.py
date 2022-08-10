@@ -1090,20 +1090,7 @@ class GroupWiseEvaluator(Evaluator):
             self.store = collections.defaultdict(
                 lambda: collections.defaultdict(list))
 
-        for (target_task, group), prediction in zip(self.targets, self.predictions):
-            self.store[(target_task, group)]['predictions'].append(prediction)
-            self.store[(target_task, group)]['targets'].append(target_task)
-
-    def add_predictions(self, predictions, targets):
-        """ Evaluate a batch of predictions.
-        Args:
-            predictions: the model output numpy array. Shape (N, num_class)
-            targets: the golden truths. Shape (N,2). The first column is the target_task and the second column is the group label.
-        """
-
-        assert len(predictions) == len(targets)
-        self.targets = targets
-        self.predictions = predictions
+        self._store_by_group()
 
     def get_report(self):
 
@@ -1120,4 +1107,3 @@ class GroupWiseEvaluator(Evaluator):
                 average='macro')
 
         return {self._get_id(): dict(metrics)}
-    
