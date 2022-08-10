@@ -7,10 +7,75 @@ from PIL import Image
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
     CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, MeanIOUEvaluator, \
-    ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator
+    ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator, GroupWiseEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
+class TestGroupWiseClassificationEvaluator(unittest.TestCase):
+    TARGETS = [np.array([[0, 0],
+                        [0, 0],
+                        [0, 1],
+                        [0, 1],
+                        [2, 0],
+                        [2, 0]]),
+               np.array([[0, 0],
+                        [1, 0],
+                        [0, 1],
+                        [0, 1],
+                        [1, 0],
+                        [1, 0]])]
+    PREDICTIONS = [np.array([[0.8, 0.1, 0.1],
+                            [0.8, 0.1, 0.1],
+                            [0.1, 0.8, 0.1],
+                            [0.1, 0.8, 0.1],
+                            [0.1, 0.1, 0.8],
+                            [0.1, 0.1, 0.8]]),
+                   np.array([[0.8, 0.1],
+                            [0.1, 0.8],
+                            [0.8, 0.1],
+                            [0.1, 0.8],
+                            [0.8, 0.1],
+                            [0.8, 0.1]])]
+
+    def test_group_wise_evaluator(self):
+        gts = [[{(0, 0): 1,
+                (0, 1): 0,
+                (2, 0): 1},
+               {(0, 0): 1,
+                (0, 1): 1,
+                (2, 0): 1}],
+
+               [{(0, 0): 1,
+                (0, 1): 0.5,
+                (1, 0): 0.333},
+               {(0, 0): 1,
+                (0, 1): 1,
+                (1, 0): 1}]]
+
+        for k_idx, top_k in enumerate([1, 5]):
+
+            for i, (targets, predictions) in enumerate(zip(self.TARGETS, self.PREDICTIONS)):
+
+                eval_fn = TopKAccuracyEvaluator(top_k)
+                eval = GroupWiseEvaluator(eval_fn)
+                eval.add_predictions(predictions, targets)
+                group_wise_top_k_acc = eval.get_report()['group_wise_accuracy']
+
+                n_target_classes = np.max(targets, axis=0)[0] + 1
+                n_group_classes = np.max(targets, axis=0)[1] + 1
+
+                if top_k >= n_target_classes:
+                    import warnings
+                    warnings.warn(f"k{[top_k]} > no. of target classes{[n_target_classes]} will result in a perfect score and is therefore meaningless.")
+
+                for t in range(n_target_classes):
+                    for g in range(n_group_classes):
+
+                        if (t, g) in group_wise_top_k_acc:
+                            acc = group_wise_top_k_acc[(t, g)][f"accuracy_top{top_k}"]
+                            self.assertAlmostEqual(acc, gts[i][k_idx][(t, g)], places=3)
+                            
+                            
 class TestClassificationEvaluator(unittest.TestCase):
     TARGETS = [
         np.array([1, 0, 0, 0, 1, 1, 0, 0, 0, 1]),
