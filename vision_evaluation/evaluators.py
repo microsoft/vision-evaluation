@@ -1050,51 +1050,47 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
 
 class GroupWiseEvaluator(Evaluator):
     """
-    Calculates metrics for the provided evaluator for each group class separately.
+    Calculates metrics for the provided evaluator for each group separately.
     """
 
-    def __init__(self, evaluator: Evaluator):
+    def __init__(self, evaluator_ctor):
         super().__init__()
-        self._evaluator = evaluator
-        self._store = collections.defaultdict(lambda: collections.defaultdict(list))
+        self._evaluator_ctor = evaluator_ctor
+        self._evaluators = {}
 
     def _get_id(self):
-        return "group_wise_metrics"
+        return 'group_wise_metrics'
 
     def add_predictions(self, predictions, ground_truths):
         """ Evaluate a batch of predictions.
         Args:
-            predictions: the model output numpy array. Shape (N, num_class)
-            ground_truths: the golden truths dict {'targets': targets, 'groups': groups}.
-                            For IC, predictions, targets and groups are numpy arrays of shape (N, num_class), (N,) and (N,) respectively. 
-                            In case of multi-label classification targets shape is (N, num_class).
-                            For OD, predictions and ground truths are lists of lists as per COCO format. 
-
+            predictions: predictions that can be consumed by target evaluator
+            ground_truths:
+            {
+                'targets': targets, # targets that can be consumed by the target evaluator
+                'groups': groups # group id can be either integer or string
+            }.
         """
 
-        assert len(predictions) == len(ground_truths['groups']) == len(ground_truths['targets'])
+        groups = ground_truths['groups']
+        targets = ground_truths['targets']
+        assert len(predictions) == len(groups) == len(targets)
 
-        for group, target, prediction in zip(ground_truths['groups'], ground_truths['targets'], predictions):
+        preds_by_group = {}
+        gts_by_group = {}
+        for group, target, prediction in zip(groups, targets, predictions):
+            preds_by_group.setdefault(group, []).append(prediction)
+            gts_by_group.setdefault(group, []).append(target)
 
-            self._store[group]['predictions'].append(prediction)
-            self._store[group]['targets'].append(target)
+        for group in preds_by_group:
+            group_preds = preds_by_group[group]
+            group_gts = gts_by_group[group]
+            if isinstance(predictions, np.ndarray):
+                group_preds = np.asarray(group_preds)
+            if isinstance(ground_truths['targets'], np.ndarray):
+                group_gts = np.asarray(group_gts)
 
-    def get_report(self, *args, **kwargs):
+            self._evaluators.setdefault(group, self._evaluator_ctor()).add_predictions(group_preds, group_gts)
 
-        metrics = collections.defaultdict()
-        for group, samples in self._store.items():
-
-            predictions = samples['predictions']
-            targets = samples['targets']
-
-            # IC expects samples to be numpy arrays and OD expects list of lists
-            if isinstance(predictions[0], np.ndarray):
-                predictions = np.asarray(predictions)
-                targets = np.asarray(targets)
-
-            self._evaluator.reset()
-            self._evaluator.add_predictions(predictions, targets)
-
-            metrics[group] = self._evaluator.get_report(*args, **kwargs)
-
-        return {self._get_id(): dict(metrics)}
+    def get_report(self, **kwargs):
+        return {self._get_id(): {group: eval.get_report(**kwargs) for group, eval in self._evaluators.items()}}

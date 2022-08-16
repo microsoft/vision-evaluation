@@ -14,83 +14,59 @@ from vision_evaluation.prediction_filters import TopKPredictionFilter, Threshold
 class TestGroupWiseEvaluator(unittest.TestCase):
     def test_group_wise_classification_evaluator(self):
 
-        GROUND_TRUTHS = [{"targets": np.array([0, 0, 0, 0, 2, 2]),
-                          "groups": np.array([0, 0, 1, 1, 0, 0])},
+        gts = [{"targets": np.array([0, 0, 0, 0, 2, 2]), "groups": np.array([0, 0, 1, 1, 0, 0])},
+               {"targets": np.array([0, 0, 0, 1, 1, 1]), "groups": np.array([0, 0, 0, 1, 1, 1])}]
 
-                         {"targets": np.array([0, 0, 0, 1, 1, 1]),
-                          "groups": np.array([0, 0, 0, 1, 1, 1])}]
+        preds = [np.array([[0.8, 0.1, 0.1],
+                           [0.8, 0.1, 0.1],
+                           [0.1, 0.8, 0.1],
+                           [0.1, 0.8, 0.1],
+                           [0.1, 0.1, 0.8],
+                           [0.1, 0.1, 0.8]]),
+                 np.array([[0.8, 0.1],
+                           [0.1, 0.8],
+                           [0.8, 0.1],
+                           [0.1, 0.8],
+                           [0.8, 0.1],
+                           [0.1, 0.8]])]
 
-        PREDICTIONS = [np.array([[0.8, 0.1, 0.1],
-                                [0.8, 0.1, 0.1],
-                                [0.1, 0.8, 0.1],
-                                [0.1, 0.8, 0.1],
-                                [0.1, 0.1, 0.8],
-                                [0.1, 0.1, 0.8]]),
+        n_group_glasses = [2, 2]
 
-                       np.array([[0.8, 0.1],
-                                [0.1, 0.8],
-                                [0.8, 0.1],
-                                [0.1, 0.8],
-                                [0.8, 0.1],
-                                [0.1, 0.8]])]
-
-        N_TARGET_CLASSES = [3, 2]
-        N_GROUP_CLASSES = [2, 2]
-
-        ACCURACY = [[{0: 1,
-                    1: 0},
-                    {0: 1,
-                    1: 1}],
-
-                    [{0: 0.666,
-                      1: 0.666},
-                    {0: 1,
-                     1: 1}]]
+        accuracies = [[{0: 1, 1: 0}, {0: 1, 1: 1}], [{0: 0.666, 1: 0.666}, {0: 1, 1: 1}]]
 
         for k_idx, top_k in enumerate([1, 5]):
 
-            for i, (ground_truths, predictions) in enumerate(zip(GROUND_TRUTHS, PREDICTIONS)):
-
-                eval_fn = TopKAccuracyEvaluator(top_k)
-                eval = GroupWiseEvaluator(eval_fn)
-
+            for i, (predictions, ground_truths) in enumerate(zip(preds, gts)):
+                eval = GroupWiseEvaluator(lambda: TopKAccuracyEvaluator(top_k))
                 eval.add_predictions(predictions, ground_truths)
                 group_wise_top_k_acc = eval.get_report()['group_wise_metrics']
 
-                if top_k >= N_TARGET_CLASSES[i]:
-                    import warnings
-                    warnings.warn(f"k{[top_k]} > no. of target classes{[N_TARGET_CLASSES]} will result in a perfect score and is therefore meaningless.")
-
-                for g in range(N_GROUP_CLASSES[i]):
-
+                for g in range(n_group_glasses[i]):
                     if g in group_wise_top_k_acc:
-                        print(f"top_k: {top_k} | sample no: {i+1} | group: {g}")
                         acc = group_wise_top_k_acc[g][f"accuracy_top{top_k}"]
-                        self.assertAlmostEqual(acc, ACCURACY[i][k_idx][g], places=2)
-                        print(f"PASSED: true acc {ACCURACY[i][k_idx][g]} | predicted acc {acc}")
+                        self.assertAlmostEqual(acc, accuracies[i][k_idx][g], places=2)
 
     def test_group_wise_detection_evaluator(self):
-        PREDICTIONS = [[[[0, 1.0, 0, 0, 10, 10]],
-                       [[1, 1.0, 5, 5, 10, 10]],
-                       [[2, 1.0, 1, 1, 5, 5]]]]
+        preds = [[[[0, 1.0, 0, 0, 10, 10]],
+                  [[1, 1.0, 5, 5, 10, 10]],
+                  [[2, 1.0, 1, 1, 5, 5]]]]
 
-        GROUND_TRUTHS = [{"targets": [[[0, 0, 0, 10, 10]], [[1, 5, 5, 10, 10]], [[2, 1, 1, 5, 5]]],
-                          "groups":  [0, 0, 1]}]
+        gts = [{"targets": [[[0, 0, 0, 10, 10]], [[1, 5, 5, 10, 10]], [[2, 1, 1, 5, 5]]],
+                "groups":  [0, 0, 1]}]
 
-        N_GROUP_CLASSES = [2]
+        n_group_classes = [2]
 
-        TRUE_mAP = [{0: 1.0, 1: 1.0}]
+        true_mAP = [{0: 1.0, 1: 1.0}]
 
-        eval_fn = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
-        eval = GroupWiseEvaluator(eval_fn)
+        eval = GroupWiseEvaluator(lambda: CocoMeanAveragePrecisionEvaluator(ious=[0.5]))
 
-        for i, (ground_truths, predictions) in enumerate(zip(GROUND_TRUTHS, PREDICTIONS)):
+        for i, (ground_truths, preds) in enumerate(zip(gts, preds)):
 
-            eval.add_predictions(predictions, ground_truths)
+            eval.add_predictions(preds, ground_truths)
             report = eval.get_report()['group_wise_metrics']
 
-            for g in range(N_GROUP_CLASSES[i]):
-                self.assertAlmostEqual(report[g]["mAP_50"], TRUE_mAP[i][g], places=8)
+            for g in range(n_group_classes[i]):
+                self.assertAlmostEqual(report[g]["mAP_50"], true_mAP[i][g], places=8)
                 self.assertTrue(isinstance(report[g]["mAP_50"], float))
 
 
