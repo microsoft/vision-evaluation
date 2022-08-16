@@ -30,7 +30,7 @@ class TestGroupWiseEvaluator(unittest.TestCase):
                            [0.8, 0.1],
                            [0.1, 0.8]])]
 
-        n_group_glasses = [2, 2]
+        n_group_classes = [2, 2]
 
         accuracies = [[{0: 1, 1: 0}, {0: 1, 1: 1}], [{0: 0.666, 1: 0.666}, {0: 1, 1: 1}]]
 
@@ -41,7 +41,7 @@ class TestGroupWiseEvaluator(unittest.TestCase):
                 eval.add_predictions(predictions, ground_truths)
                 group_wise_top_k_acc = eval.get_report()['group_wise_metrics']
 
-                for g in range(n_group_glasses[i]):
+                for g in range(n_group_classes[i]):
                     if g in group_wise_top_k_acc:
                         acc = group_wise_top_k_acc[g][f"accuracy_top{top_k}"]
                         self.assertAlmostEqual(acc, accuracies[i][k_idx][g], places=2)
@@ -67,7 +67,6 @@ class TestGroupWiseEvaluator(unittest.TestCase):
 
             for g in range(n_group_classes[i]):
                 self.assertAlmostEqual(report[g]["mAP_50"], true_mAP[i][g], places=8)
-                self.assertIsInstance(report[g]["mAP_50"], float)
 
 
 class TestClassificationEvaluator(unittest.TestCase):
