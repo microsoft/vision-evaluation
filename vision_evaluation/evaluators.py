@@ -1050,60 +1050,51 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
 
 class GroupWiseEvaluator(Evaluator):
     """
-    Group wise evaluator: calculates metrics for the provided evaluator for each target class and group class separately.
+    Calculates metrics for the provided evaluator for each group class separately.
     """
 
     def __init__(self, evaluator: Evaluator):
         super().__init__()
         self._evaluator = evaluator
-        self.store = None
+        self._store = collections.defaultdict(lambda: collections.defaultdict(list))
 
     def _get_id(self):
-        return "group_wise_accuracy"
-
-    def _store_by_group(self):
-        """
-            store dict will save target class labels and predictions corresponding to each group class label.
-
-            store = {(target_class, group_class) : {
-                "predictions":[]
-                "targets":[]
-            }}
-            target_class: 0,1,2...
-            group_class: 0,1,2...
-        """
-        for (target_class, group_class), prediction in zip(self.ground_truths, self.predictions):
-            self.store[(target_class, group_class)]['predictions'].append(prediction)
-            self.store[(target_class, group_class)]['targets'].append(target_class)
+        return "group_wise_metrics"
 
     def add_predictions(self, predictions, ground_truths):
         """ Evaluate a batch of predictions.
         Args:
             predictions: the model output numpy array. Shape (N, num_class)
-            ground_truths: the golden truths numpy array. Shape (N,2). The first column is the target class label and the second column is the group class label.
+            ground_truths: the golden truths dict {'targets': targets, 'groups': groups}.
+                            For IC, predictions, targets and groups are numpy arrays of shape (N, num_class), (N,) and (N,) respectively. 
+                            In case of multi-label classification targets shape is (N, num_class).
+                            For OD, predictions and ground truths are lists of lists as per COCO format. 
+
         """
-        assert len(predictions) == len(ground_truths)
-        self.ground_truths = ground_truths
-        self.predictions = predictions
 
-        if not self.store:
-            self.store = collections.defaultdict(
-                lambda: collections.defaultdict(list))
+        assert len(predictions) == len(ground_truths['groups']) == len(ground_truths['targets'])
 
-        self._store_by_group()
+        for group, target, prediction in zip(ground_truths['groups'], ground_truths['targets'], predictions):
 
-    def get_report(self):
+            self._store[group]['predictions'].append(prediction)
+            self._store[group]['targets'].append(target)
+
+    def get_report(self, *args, **kwargs):
 
         metrics = collections.defaultdict()
-        for (target_class, group_class), samples in self.store.items():
+        for group, samples in self._store.items():
 
-            predictions = np.array(samples['predictions'])
-            targets = np.array(samples['targets'])
+            predictions = samples['predictions']
+            targets = samples['targets']
+
+            # IC expects samples to be numpy arrays and OD expects list of lists
+            if isinstance(predictions[0], np.ndarray):
+                predictions = np.asarray(predictions)
+                targets = np.asarray(targets)
 
             self._evaluator.reset()
             self._evaluator.add_predictions(predictions, targets)
 
-            metrics[(target_class, group_class)] = self._evaluator.get_report(
-                average='macro')
+            metrics[group] = self._evaluator.get_report(*args, **kwargs)
 
         return {self._get_id(): dict(metrics)}

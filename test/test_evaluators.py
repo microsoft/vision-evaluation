@@ -11,71 +11,89 @@ from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvalu
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
-class TestGroupWiseClassificationEvaluator(unittest.TestCase):
-    TARGETS = [np.array([[0, 0],
-                        [0, 0],
-                        [0, 1],
-                        [0, 1],
-                        [2, 0],
-                        [2, 0]]),
-               np.array([[0, 0],
-                        [1, 0],
-                        [0, 1],
-                        [0, 1],
-                        [1, 0],
-                        [1, 0]])]
-    PREDICTIONS = [np.array([[0.8, 0.1, 0.1],
-                            [0.8, 0.1, 0.1],
-                            [0.1, 0.8, 0.1],
-                            [0.1, 0.8, 0.1],
-                            [0.1, 0.1, 0.8],
-                            [0.1, 0.1, 0.8]]),
-                   np.array([[0.8, 0.1],
-                            [0.1, 0.8],
-                            [0.8, 0.1],
-                            [0.1, 0.8],
-                            [0.8, 0.1],
-                            [0.8, 0.1]])]
+class TestGroupWiseEvaluator(unittest.TestCase):
+    def test_group_wise_classification_evaluator(self):
 
-    def test_group_wise_evaluator(self):
-        gts = [[{(0, 0): 1,
-                (0, 1): 0,
-                (2, 0): 1},
-               {(0, 0): 1,
-                (0, 1): 1,
-                (2, 0): 1}],
+        GROUND_TRUTHS = [{"targets": np.array([0, 0, 0, 0, 2, 2]),
+                          "groups": np.array([0, 0, 1, 1, 0, 0])},
 
-               [{(0, 0): 1,
-                (0, 1): 0.5,
-                (1, 0): 0.333},
-               {(0, 0): 1,
-                (0, 1): 1,
-                (1, 0): 1}]]
+                         {"targets": np.array([0, 0, 0, 1, 1, 1]),
+                          "groups": np.array([0, 0, 0, 1, 1, 1])}]
+
+        PREDICTIONS = [np.array([[0.8, 0.1, 0.1],
+                                [0.8, 0.1, 0.1],
+                                [0.1, 0.8, 0.1],
+                                [0.1, 0.8, 0.1],
+                                [0.1, 0.1, 0.8],
+                                [0.1, 0.1, 0.8]]),
+
+                       np.array([[0.8, 0.1],
+                                [0.1, 0.8],
+                                [0.8, 0.1],
+                                [0.1, 0.8],
+                                [0.8, 0.1],
+                                [0.1, 0.8]])]
+
+        N_TARGET_CLASSES = [3, 2]
+        N_GROUP_CLASSES = [2, 2]
+
+        ACCURACY = [[{0: 1,
+                    1: 0},
+                    {0: 1,
+                    1: 1}],
+
+                    [{0: 0.666,
+                      1: 0.666},
+                    {0: 1,
+                     1: 1}]]
 
         for k_idx, top_k in enumerate([1, 5]):
 
-            for i, (targets, predictions) in enumerate(zip(self.TARGETS, self.PREDICTIONS)):
+            for i, (ground_truths, predictions) in enumerate(zip(GROUND_TRUTHS, PREDICTIONS)):
 
                 eval_fn = TopKAccuracyEvaluator(top_k)
                 eval = GroupWiseEvaluator(eval_fn)
-                eval.add_predictions(predictions, targets)
-                group_wise_top_k_acc = eval.get_report()['group_wise_accuracy']
 
-                n_target_classes = np.max(targets, axis=0)[0] + 1
-                n_group_classes = np.max(targets, axis=0)[1] + 1
+                eval.add_predictions(predictions, ground_truths)
+                group_wise_top_k_acc = eval.get_report()['group_wise_metrics']
 
-                if top_k >= n_target_classes:
+                if top_k >= N_TARGET_CLASSES[i]:
                     import warnings
-                    warnings.warn(f"k{[top_k]} > no. of target classes{[n_target_classes]} will result in a perfect score and is therefore meaningless.")
+                    warnings.warn(f"k{[top_k]} > no. of target classes{[N_TARGET_CLASSES]} will result in a perfect score and is therefore meaningless.")
 
-                for t in range(n_target_classes):
-                    for g in range(n_group_classes):
+                for g in range(N_GROUP_CLASSES[i]):
 
-                        if (t, g) in group_wise_top_k_acc:
-                            acc = group_wise_top_k_acc[(t, g)][f"accuracy_top{top_k}"]
-                            self.assertAlmostEqual(acc, gts[i][k_idx][(t, g)], places=3)
-                            
-                            
+                    if g in group_wise_top_k_acc:
+                        print(f"top_k: {top_k} | sample no: {i+1} | group: {g}")
+                        acc = group_wise_top_k_acc[g][f"accuracy_top{top_k}"]
+                        self.assertAlmostEqual(acc, ACCURACY[i][k_idx][g], places=2)
+                        print(f"PASSED: true acc {ACCURACY[i][k_idx][g]} | predicted acc {acc}")
+
+    def test_group_wise_detection_evaluator(self):
+        PREDICTIONS = [[[[0, 1.0, 0, 0, 10, 10]],
+                       [[1, 1.0, 5, 5, 10, 10]],
+                       [[2, 1.0, 1, 1, 5, 5]]]]
+
+        GROUND_TRUTHS = [{"targets": [[[0, 0, 0, 10, 10]], [[1, 5, 5, 10, 10]], [[2, 1, 1, 5, 5]]],
+                          "groups":  [0, 0, 1]}]
+
+        N_GROUP_CLASSES = [2]
+
+        TRUE_mAP = [{0: 1.0, 1: 1.0}]
+
+        eval_fn = CocoMeanAveragePrecisionEvaluator(ious=[0.5])
+        eval = GroupWiseEvaluator(eval_fn)
+
+        for i, (ground_truths, predictions) in enumerate(zip(GROUND_TRUTHS, PREDICTIONS)):
+
+            eval.add_predictions(predictions, ground_truths)
+            report = eval.get_report()['group_wise_metrics']
+
+            for g in range(N_GROUP_CLASSES[i]):
+                self.assertAlmostEqual(report[g]["mAP_50"], TRUE_mAP[i][g], places=8)
+                self.assertTrue(isinstance(report[g]["mAP_50"], float))
+
+
 class TestClassificationEvaluator(unittest.TestCase):
     TARGETS = [
         np.array([1, 0, 0, 0, 1, 1, 0, 0, 0, 1]),
