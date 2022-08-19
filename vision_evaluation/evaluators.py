@@ -1046,3 +1046,51 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
             gt_mask = np.asarray(gt_mask)
             mean_l1 = np.abs(pred_mask.astype(np.float)-gt_mask.astype(np.float)).mean()
             self._metric_sum += mean_l1
+
+
+class GroupWiseEvaluator(Evaluator):
+    """
+    Calculates metrics for the provided evaluator for each group separately.
+    """
+
+    def __init__(self, evaluator_ctor):
+        super().__init__()
+        self._evaluator_ctor = evaluator_ctor
+        self._evaluators = {}
+
+    def _get_id(self):
+        return 'group_wise_metrics'
+
+    def add_predictions(self, predictions, ground_truths):
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: predictions that can be consumed by target evaluator
+            ground_truths:
+            {
+                'targets': targets, # targets that can be consumed by the target evaluator
+                'groups': groups # group id can be either integer or string
+            }.
+        """
+
+        groups = ground_truths['groups']
+        targets = ground_truths['targets']
+        assert len(predictions) == len(groups) == len(targets)
+
+        preds_by_group = {}
+        gts_by_group = {}
+        for group, target, prediction in zip(groups, targets, predictions):
+            preds_by_group.setdefault(group, []).append(prediction)
+            gts_by_group.setdefault(group, []).append(target)
+
+        for group in preds_by_group:
+            group_preds = preds_by_group[group]
+            group_gts = gts_by_group[group]
+            if isinstance(predictions, np.ndarray):
+                group_preds = np.asarray(group_preds)
+            if isinstance(ground_truths['targets'], np.ndarray):
+                group_gts = np.asarray(group_gts)
+
+            self._evaluators.setdefault(group, self._evaluator_ctor()).add_predictions(group_preds, group_gts)
+
+    def get_report(self, **kwargs):
+        return {self._get_id(): {group: eval.get_report(**kwargs) for group, eval in self._evaluators.items()}}
