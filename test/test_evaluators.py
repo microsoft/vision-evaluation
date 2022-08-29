@@ -221,6 +221,22 @@ class TestMultilabelClassificationEvaluator(unittest.TestCase):
             recall_eval.add_predictions(self.PREDICTIONS, self.TARGETS)
             self.assertAlmostEqual(recall_eval.get_report(average='samples')[f"recall_top{ks[i]}"], expectations[i], places=4)
 
+    def test_average_precision_evaluator(self):
+        targets = np.array([[1, 0, 0, 0],
+                            [0, 1, 1, 1],
+                            [0, 0, 1, 1],
+                            [1, 1, 1, 0]])
+        predictions = np.array([[0, 0.3, 0.7, 0],
+                                [0, 1, 0.5, 0],
+                                [0, 0, 0.5, 0],
+                                [0.5, 0.6, 0, 0.5]])
+        gts = [0.67328, 0.73611, 0.731481, 0.680555]
+        evaluator = AveragePrecisionEvaluator()
+        evaluator.add_predictions(predictions, targets)
+        for fl_i, flavor in enumerate(['micro', 'macro', 'weighted', 'samples']):
+            evaluator.get_report(average=flavor)['average_precision']
+            self.assertAlmostEqual(evaluator.get_report(average=flavor)['average_precision'], gts[fl_i], places=5)
+
     def test_f1_score_evaluator(self):
         thresholds = [0.0, 0.3, 0.6, 0.7]
         expectations = {'f1': [0.8, 0.94118, 0.57142, 0.44444], 'recall': [1.0, 1.0, 0.5, 0.33333], 'precision': [0.66666, 0.88888, 0.66666, 0.66666]}

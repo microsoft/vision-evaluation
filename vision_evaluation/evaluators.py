@@ -1,5 +1,6 @@
 import collections
 import statistics
+from typing import Iterable
 
 import sklearn.metrics as sm
 import numpy as np
@@ -104,6 +105,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         else:
             self.all_predictions = predictions.copy()
 
+        print(self.all_predictions)
         if self.all_targets.size != 0:
             self.all_targets = np.append(self.all_targets, targets, axis=0)
         else:
@@ -298,19 +300,25 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
             return super().calculate_score(average)
 
         ap = 0.0
+        if self.all_targets.size == 0:
+            return ap
+
         n_class_with_gt = 0
-        if self.all_targets.size > 0:
-            c_to_sample_indices = dict()
-            for i, t in enumerate(self.all_targets):
-                c_to_sample_indices.setdefault(t, []).append(i)
+        c_to_sample_indices = dict()
+        for sample_idx, targets in enumerate(self.all_targets):
+            if isinstance(targets, Iterable):
+                for t_idx, t in enumerate(targets):
+                    if t:
+                        c_to_sample_indices.setdefault(t_idx, []).append(sample_idx)
+            else:
+                c_to_sample_indices.setdefault(targets, []).append(sample_idx)
 
-            for i in range(self.all_predictions.shape[1]):
-                if i not in c_to_sample_indices:
-                    continue
-                class_tar_vec = _indices_to_vec(c_to_sample_indices[i], self.all_targets.size)
-
-                ap += sm.average_precision_score(class_tar_vec, self.all_predictions[:, i])
-                n_class_with_gt += 1
+        for c_idx in range(self.all_predictions.shape[1]):
+            if c_idx not in c_to_sample_indices:
+                continue
+            class_target_vec = _indices_to_vec(c_to_sample_indices[c_idx], len(self.all_targets))
+            ap += sm.average_precision_score(class_target_vec, self.all_predictions[:, c_idx])
+            n_class_with_gt += 1
 
         return ap / n_class_with_gt if n_class_with_gt > 0 else 0.0
 
