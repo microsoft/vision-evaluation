@@ -105,7 +105,6 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         else:
             self.all_predictions = predictions.copy()
 
-        print(self.all_predictions)
         if self.all_targets.size != 0:
             self.all_targets = np.append(self.all_targets, targets, axis=0)
         else:
