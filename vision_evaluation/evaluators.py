@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 
 import cv2
 from pycocotools.cocoeval import Params, COCOeval
-from sklearn.metrics import balanced_accuracy_score
 
 from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 from functools import reduce
@@ -745,7 +744,7 @@ class BalancedAccuracyScoreEvaluator(MemorizingEverythingEvaluator):
     def _calculate(self, targets, predictions, average):
         single_targets = np.argmax(targets, axis=1)
         y_single_preds = np.argmax(predictions, axis=1)
-        return balanced_accuracy_score(single_targets, y_single_preds)
+        return sm.balanced_accuracy_score(single_targets, y_single_preds)
 
     def _get_id(self):
         return 'balanced_accuracy'
