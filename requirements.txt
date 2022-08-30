@@ -1,5 +1,5 @@
 numpy
-sklearn
+scikit-learn>=1.0
 pycocotools
 pycocoevalcap
 install-jdk

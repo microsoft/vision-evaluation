@@ -1,7 +1,7 @@
 import setuptools
 from os import path
 
-VERSION = '0.2.8'
+VERSION = '0.2.9'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -11,20 +11,19 @@ with open(path.join(here, 'README.md'), 'r') as f:
 
 setuptools.setup(name='vision-evaluation',
                  author='Ping Jin, Shohei Ono',
-                 description="Evaluation code for vision tasks.",
+                 description="Evaluation metric codes for various vision tasks.",
                  long_description=long_description,
                  long_description_content_type="text/markdown",
-                 url='https://github.com/pj-ms/vision-evaluation',
+                 url='https://github.com/microsoft/vision-evaluation',
                  version=VERSION,
                  license='MIT',
-                 python_requires='>=3.6',
+                 python_requires='>=3.7',
                  packages=setuptools.find_packages(),
                  keywords='vision metric evaluation classification detection',
                  classifiers=[
                      'Development Status :: 4 - Beta',
                      'Intended Audience :: Developers',
                      'License :: OSI Approved :: MIT License',
-                     'Programming Language :: Python :: 3.6',
                      'Programming Language :: Python :: 3.7',
                      'Programming Language :: Python :: 3.8',
                      'Programming Language :: Python :: 3.9',
@@ -32,7 +31,7 @@ setuptools.setup(name='vision-evaluation',
                  ],
                  install_requires=[
                      'numpy',
-                     'sklearn',
+                     'scikit-learn>=1.0',
                      'pycocotools',
                      'pycocoevalcap',
                      'opencv-python-headless',
