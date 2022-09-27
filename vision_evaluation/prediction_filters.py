@@ -22,8 +22,11 @@ class TopKPredictionFilter(PredictionFilter):
         """
         Args:
             k: k predictions with highest confidence
+            prediction_mode: can be 'indices' or 'prob', indicating whether the predictions are a set of class indices or predicted probabilities.
         """
         assert k >= 0
+        assert prediction_mode == 'prob' or prediction_mode == 'indices', f"Prediction mode {prediction_mode} is not supported!"
+
         self.prediction_mode = prediction_mode
         self.k = k
 
@@ -34,7 +37,6 @@ class TopKPredictionFilter(PredictionFilter):
                 when 'prediction_mode' is 'prob', refers to predicted probabilities of N samples belonging to C classes. Shape (N, C)
                 when 'prediction_mode' is 'indices', refers to indices of M highest confidence of C classes in descending order, for each of the N samples. Shape (N, M)
             return_mode: can be 'indices' or 'vec', indicating whether return value is a set of class indices or 0-1 vector
-            prediction_mode: can be 'indices' or 'prob', indicating whether the predictions are a set of class indices or predicted probabilities.
 
         Returns:
             k labels with highest probabilities, for each sample
