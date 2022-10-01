@@ -1123,6 +1123,9 @@ class MeanLpErrorEvaluator(Evaluator):
         self.total_num = 0
         self.total_error = 0
 
+    def _get_id(self):
+        return f'l{self.p}'
+
     def add_predictions(self, predictions, targets):
         """ Evaluate a batch of predictions.
         Args:
@@ -1138,5 +1141,5 @@ class MeanLpErrorEvaluator(Evaluator):
         self.total_num += n_sample
     
     def get_report(self, **kwargs):
-        return {f'l{self.p}': (float(self.total_error)**(1/self.p) / self.total_num) if self.total_num else 0.0}
+        return {f'{self._get_id()}': (float(self.total_error)**(1/self.p) / self.total_num) if self.total_num else 0.0}
         
