@@ -1102,35 +1102,31 @@ class GroupWiseEvaluator(Evaluator):
         return {self._get_id(): {group: eval.get_report(**kwargs) for group, eval in self._evaluators.items()}}
 
 
-class TopKLpErrorEvaluator(Evaluator):
+class MeanLpErrorEvaluator(Evaluator):
     """
-    Top k error evaluator for image regression targets
+    Error evaluator for regression targets
     Parameters:
-        k: k predictions with the lowest distances or highest confidences
-        p: Lp order of the norm used, L1 or L2 are supported
+        p: Lp order of the norm used
     """
 
-    def __init__(self, k: int, p: int):
-        assert k > 0
-        assert p in [1, 2], 'only L1 and L2 distances are supported'
-        self.k = k
+    def __init__(self, p: int):
+        assert p != 0
         self.p = p
 
         self.total_num = 0
-        self.topk_distance = 0
+        self.total_error = 0
 
-        super(TopKLpErrorEvaluator, self).__init__()
-        self.prediction_filter = TopKPredictionFilter(k)
-
+        super(MeanLpErrorEvaluator, self).__init__()
+        
     def reset(self):
-        super(TopKLpErrorEvaluator, self).reset()
+        super(MeanLpErrorEvaluator, self).reset()
         self.total_num = 0
-        self.topk_distance = 0
+        self.total_error = 0
 
     def add_predictions(self, predictions, targets):
         """ Evaluate a batch of predictions.
         Args:
-            predictions: the model output numpy array. Shape (N, M), or e.g. (N, N) with pairwise distances
+            predictions: the model output numpy array. Shape (N,)
             targets: the golden truths. Shape (N,)
         """
         assert len(predictions) == len(targets)
@@ -1138,9 +1134,9 @@ class TopKLpErrorEvaluator(Evaluator):
 
         n_sample = len(predictions)
 
-        top_k_predictions = self.prediction_filter.filter(-predictions, 'indices')
-        self.topk_distance += np.mean([np.linalg.norm(targets[sample_idx] - targets[top_k_predictions[sample_idx]], ord=self.p) / self.k for sample_idx in range(targets.shape[0])])
+        self.total_error += np.linalg.norm(predictions - targets, ord=self.p)**self.p
         self.total_num += n_sample
-
+    
     def get_report(self, **kwargs):
-        return {f'l{self.p}_{self.prediction_filter.identifier}': float(self.topk_distance) / self.total_num if self.total_num else 0.0}
+        return {f'l{self.p}': (float(self.total_error)**(1/self.p) / self.total_num) if self.total_num else 0.0}
+        

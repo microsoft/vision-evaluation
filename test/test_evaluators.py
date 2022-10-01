@@ -7,7 +7,7 @@ from PIL import Image
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
     CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, MeanIOUEvaluator, \
-    ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator, GroupWiseEvaluator
+    ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -809,3 +809,32 @@ class TestImageMattingEvaluator(unittest.TestCase):
         evaluator.add_predictions(predictions=self.image_matting_predictions, targets=self.image_matting_targets)
         report = evaluator.get_report()
         self.assertAlmostEqual(report["b_fgIOU"], 0.2460145344436508)
+
+
+class TestMeanLpErrorEvaluator(unittest.TestCase):
+    TARGETS = np.array([1, 2, 3, 4, 5, 4, 3, 2, 1, 0]).astype(float)
+    PREDICTIONS = np.array([0, 1, 2, 3, 4, 5, 4, 3, 2, 1]).astype(float)
+
+    def test_l1_evaluator(self):
+        evaluator_l1 = MeanLpErrorEvaluator(p=1)
+        # test that adding in increments works
+        evaluator_l1.add_predictions(predictions=self.PREDICTIONS[:5], targets=self.TARGETS[:5])
+        evaluator_l1.add_predictions(predictions=self.PREDICTIONS[5:], targets=self.TARGETS[5:])
+        report = evaluator_l1.get_report()
+        self.assertAlmostEqual(report[evaluator_l1._get_id()], 1, places=4)
+
+    def test_l2_evaluator(self):
+        evaluator_l2 = MeanLpErrorEvaluator(p=2)
+        # test that adding in increments works
+        evaluator_l2.add_predictions(predictions=self.PREDICTIONS[:5], targets=self.TARGETS[:5])
+        evaluator_l2.add_predictions(predictions=self.PREDICTIONS[5:], targets=self.TARGETS[5:])
+        report = evaluator_l2.get_report()
+        self.assertAlmostEqual(report[evaluator_l2._get_id()], np.sqrt(10) / 10, places=4)
+
+    def test_lsqrt_evaluator(self):
+        evaluator_lsqrt = MeanLpErrorEvaluator(p=0.5)
+        # test that adding in increments works
+        evaluator_lsqrt.add_predictions(predictions=self.PREDICTIONS[:5], targets=self.TARGETS[:5])
+        evaluator_lsqrt.add_predictions(predictions=self.PREDICTIONS[5:], targets=self.TARGETS[5:])
+        report = evaluator_lsqrt.get_report()
+        self.assertAlmostEqual(report[evaluator_lsqrt._get_id()], 10, places=4)
