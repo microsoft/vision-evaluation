@@ -1105,12 +1105,14 @@ class GroupWiseEvaluator(Evaluator):
 class MeanLpErrorEvaluator(Evaluator):
     """
     Error evaluator for regression targets
-    Parameters:
-        p: Lp order of the norm used
     """
 
     def __init__(self, p: int):
-        assert p != 0
+        """ Initialize the evaluator.
+        Args:
+            p: Lp order of the norm used
+        """
+        assert p > 0
         self.p = p
 
         self.total_num = 0
@@ -1124,22 +1126,21 @@ class MeanLpErrorEvaluator(Evaluator):
         self.total_error = 0
 
     def _get_id(self):
-        return f'l{self.p}'
+        return f'mean_l{self.p}_error'
 
     def add_predictions(self, predictions, targets):
         """ Evaluate a batch of predictions.
         Args:
             predictions: the model output numpy array. Shape (N,)
-            targets: the golden truths. Shape (N,)
+            targets: the ground truth labels. Shape (N,)
         """
         assert len(predictions) == len(targets)
         assert len(targets.shape) == 1
 
         n_sample = len(predictions)
 
-        self.total_error += np.linalg.norm(predictions - targets, ord=self.p)**self.p
+        self.total_error += sum(np.power(np.abs(predictions - targets), self.p))
         self.total_num += n_sample
     
     def get_report(self, **kwargs):
-        return {f'{self._get_id()}': (float(self.total_error)**(1/self.p) / self.total_num) if self.total_num else 0.0}
-        
+        return {f'{self._get_id()}': (float(self.total_error)**(1 / self.p) / self.total_num) if self.total_num else 0.0}
