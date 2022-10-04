@@ -830,11 +830,3 @@ class TestMeanLpErrorEvaluator(unittest.TestCase):
         evaluator_l2.add_predictions(predictions=self.PREDICTIONS[5:], targets=self.TARGETS[5:])
         report = evaluator_l2.get_report()
         self.assertAlmostEqual(report[evaluator_l2._get_id()], np.sqrt(10) / 10, places=4)
-
-    def test_lsqrt_evaluator(self):
-        evaluator_lsqrt = MeanLpErrorEvaluator(p=0.5)
-        # test that adding in increments works
-        evaluator_lsqrt.add_predictions(predictions=self.PREDICTIONS[:5], targets=self.TARGETS[:5])
-        evaluator_lsqrt.add_predictions(predictions=self.PREDICTIONS[5:], targets=self.TARGETS[5:])
-        report = evaluator_lsqrt.get_report()
-        self.assertAlmostEqual(report[evaluator_lsqrt._get_id()], 10, places=4)
