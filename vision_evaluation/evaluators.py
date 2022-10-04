@@ -1104,7 +1104,7 @@ class GroupWiseEvaluator(Evaluator):
 
 class MeanLpErrorEvaluator(Evaluator):
     """
-    Error evaluator for regression targets
+    Mean Lp error evaluator for regression targets
     """
 
     def __init__(self, p: int):
