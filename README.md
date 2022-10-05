@@ -22,6 +22,7 @@ This repo currently offers evaluation metrics for three vision tasks:
   - `AveragePrecisionEvaluator`: computes the average precision, i.e., precision averaged across different confidence thresholds.
   - `PrecisionEvaluator`: computes precision.
   - `RecallEvaluator`: computes recall.
+  - `BalancedAccuracyScoreEvaluator`: computes balanced accuracy, i.e., average recall across classes, for multiclass classification.
   - `RocAucEvaluator`: computes Area under the Receiver Operating Characteristic Curve.
   - `F1ScoreEvaluator`: computes f1-score (recall and precision will be reported as well).
   - `EceLossEvaluator`: computes the [ECE loss](https://arxiv.org/pdf/1706.04599.pdf), i.e., the expected calibration error, given the model confidence and true labels for a set of data points.
@@ -39,14 +40,17 @@ This repo currently offers evaluation metrics for three vision tasks:
   - `BoundaryMeanIOUEvaluator`: computes the boundary mean intersection-over-union score. 
   - `BoundaryForegroundIOUEvaluator`:  computes the boundary foreground intersection-over-union score.
   - `L1ErrorEvaluator`:  computes the L1 error.
+- **Image regression**:
+  - `MeanLpErrorEvaluator`: computes the mean Lp error (e.g. L1 error for p=1, L2 error for p=2, etc.).
   
 While different machine learning problems/applications prefer different metrics, below are some general recommendations:
 
-- **Multiclass classification**: Top-1 accuracy and Top-5 accuracy
-- **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
+- **Multiclass classification**: Top-1 Accuracy and Top-5 Accuracy
+- **Multilabel classification**: Average Precision, Precision/Recall/Precision@k/threshold, where k and threshold can be very problem-specific
 - **Object detection**: mAP@IoU=30 and mAP@IoU=50
 - **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
-- **Image matting**: mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
+- **Image matting**: Mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
+- **Image regression**: Mean L1 Error, Mean L2 Error
 
 ## Additional Requirements
 
