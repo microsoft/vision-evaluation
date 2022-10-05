@@ -45,12 +45,12 @@ This repo currently offers evaluation metrics for three vision tasks:
   
 While different machine learning problems/applications prefer different metrics, below are some general recommendations:
 
-- **Multiclass classification**: Top-1 accuracy and Top-5 accuracy
-- **Multilabel classification**: Average precision, Precision/recall/precision@k/threshold, where k and threshold can be very problem-specific
+- **Multiclass classification**: Top-1 Accuracy and Top-5 Accuracy
+- **Multilabel classification**: Average Precision, Precision/Recall/Precision@k/threshold, where k and threshold can be very problem-specific
 - **Object detection**: mAP@IoU=30 and mAP@IoU=50
 - **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
-- **Image matting**: mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
-- **Image regression**: Mean Lp error
+- **Image matting**: Mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
+- **Image regression**: Mean L1 Error, Mean L2 Error
 
 ## Additional Requirements
 
