@@ -706,8 +706,9 @@ class CocoMeanAveragePrecisionEvaluator(Evaluator):
         # Apply the map.
         def _apply_cate_id_map(gt_or_pred):
             for bboxes in gt_or_pred:
-                for bbox in bboxes:
-                    bbox[0] = cate_id_old_to_new[bbox[0]]
+                for i in range(len(bboxes)):
+                    bboxes[i] = list(bboxes[i])  # ensure bbox is mutable
+                    bboxes[i][0] = cate_id_old_to_new[bboxes[i][0]]
 
         _apply_cate_id_map(self.targets)
         _apply_cate_id_map(self.predictions)
@@ -1119,7 +1120,7 @@ class MeanLpErrorEvaluator(Evaluator):
         self.total_error = 0
 
         super(MeanLpErrorEvaluator, self).__init__()
-        
+
     def reset(self):
         super(MeanLpErrorEvaluator, self).reset()
         self.total_num = 0
@@ -1141,6 +1142,6 @@ class MeanLpErrorEvaluator(Evaluator):
 
         self.total_error += sum(np.power(np.abs(predictions - targets), self.p))
         self.total_num += n_sample
-    
+
     def get_report(self, **kwargs):
         return {f'{self._get_id()}': (float(self.total_error)**(1 / self.p) / self.total_num) if self.total_num else 0.0}

@@ -640,7 +640,7 @@ class TestCocoMeanAveragePrecisionEvaluator(unittest.TestCase):
     def test_cat_id_remap(self):
         evaluator = CocoMeanAveragePrecisionEvaluator(ious=[0.2, 0.5], coordinates='relative')
 
-        predictions = [[[0, 1.0, 0, 0, 1, 1],
+        predictions = [[(0, 1.0, 0, 0, 1, 1),
                         [1, 1.0, 0.5, 0.5, 1, 1],
                         [2, 1.0, 0.1, 0.1, 0.5, 0.5]]]
 
