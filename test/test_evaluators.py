@@ -839,72 +839,47 @@ class TestMeanLpErrorEvaluator(unittest.TestCase):
 
 
 class TestInformationRetrievalMetrics(unittest.TestCase):
+    PREDICTIONS = [np.array([[5, 4, 3, 2, 1]]),
+                   np.array([[5, 4, 3, 2, 1]]),
+                   np.array([[1, 2, 3, 4, 5]]),
+                   np.array([[5, 4, 3, 2, 1]]),
+                   np.array([[5, 4, 3, 2, 1],
+                             [5, 4, 3, 2, 1]]),
+                   np.array([[5, 4, 3, 2, 1],
+                             [5, 4, 3, 2, 1]]),
+                   np.array([[1]]),
+                   np.array([[2],
+                             [3]])]
+    TARGETS = [np.array([[1, 1, 0, 0, 1]]),
+               np.array([[1, 1, 0, 0, 1]]),
+               np.array([[1, 0, 0, 1, 1]]),
+               np.array([[0, 0, 0, 0, 1]]),
+               np.array([[0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 1]]),
+               np.array([[1, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 1]]),
+               np.array([[1]]),
+               np.array([[1],
+                         [0]])]
+
     def test_recall_at_k(self):
-        predictions = [np.array([[5, 4, 3, 2, 1]]),
-                       np.array([[5, 4, 3, 2, 1]]),
-                       np.array([[1, 2, 3, 4, 5]]),
-                       np.array([[5, 4, 3, 2, 1]]),
-                       np.array([[5, 4, 3, 2, 1],
-                                 [5, 4, 3, 2, 1]]),
-                       np.array([[5, 4, 3, 2, 1],
-                                 [5, 4, 3, 2, 1]]),
-                       np.array([[1]]),
-                       np.array([[0]]),
-                       np.array([[2],
-                                 [3]])]
-        targets = [np.array([[1, 1, 0, 0, 1]]),
-                   np.array([[1, 1, 0, 0, 1]]),
-                   np.array([[1, 0, 0, 1, 1]]),
-                   np.array([[0, 0, 0, 0, 1]]),
-                   np.array([[0, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 1]]),
-                   np.array([[1, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 1]]),
-                   np.array([[0]]),
-                   np.array([[0]]),
-                   np.array([[1],
-                             [0]])]
-        ks = [6, 8, 6, 6, 6, 6, 4, 4, 4]
+        ks = [6, 8, 6, 6, 6, 6, 4, 4]
         expectations = [[0, 0.33333, 0.66666, 0.66666, 0.66666, 1.0],
                         [0, 0.33333, 0.66666, 0.66666, 0.66666, 1.0, 1.0, 1.0],
                         [0, 0.33333, 0.66666, 0.66666, 0.66666, 1.0],
                         [0, 0, 0, 0, 0, 1.0],
                         [0, 0, 0, 0, 0, 1.0],
                         [0, 0.25, 0.25, 0.25, 0.25, 1.0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
+                        [0, 1.0, 1.0, 1.0],
                         [0, 0.5, 0.5, 0.5]]
-        assert len(predictions) == len(targets) == len(ks) == len(expectations)
-        for preds, tgts, exps, k in zip(predictions, targets, expectations, ks):
+        assert len(self.PREDICTIONS) == len(self.TARGETS) == len(ks) == len(expectations)
+        for preds, tgts, exps, k in zip(self.PREDICTIONS, self.TARGETS, expectations, ks):
             for i in range(k):
                 recall_eval = RecallEvaluator(TopKPredictionFilter(i))
                 recall_eval.add_predictions(preds, tgts)
                 self.assertAlmostEqual(recall_eval.get_report(average='samples')[f"recall_top{i}"], exps[i], places=4)
 
     def test_precision_at_k(self):
-        predictions = [np.array([[5, 4, 3, 2, 1]]),
-                       np.array([[5, 4, 3, 2, 1]]),
-                       np.array([[1, 2, 3, 4, 5]]),
-                       np.array([[5, 4, 3, 2, 1]]),
-                       np.array([[5, 4, 3, 2, 1],
-                                 [5, 4, 3, 2, 1]]),
-                       np.array([[5, 4, 3, 2, 1],
-                                 [5, 4, 3, 2, 1]]),
-                       np.array([[1]]),
-                       np.array([[2],
-                                 [3]])]
-        targets = [np.array([[1, 1, 0, 0, 1]]),
-                   np.array([[1, 1, 0, 0, 1]]),
-                   np.array([[1, 0, 0, 1, 1]]),
-                   np.array([[0, 0, 0, 0, 1]]),
-                   np.array([[0, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 1]]),
-                   np.array([[1, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 1]]),
-                   np.array([[1]]),
-                   np.array([[1],
-                             [0]])]
-
         ks = [6, 8, 6, 6, 6, 6, 4, 4]
         expectations = [[0, 1.0, 1.0, 0.66666, 0.5, 0.6],
                         [0, 1.0, 1.0, 0.66666, 0.5, 0.6, 0.6, 0.6],
@@ -914,8 +889,8 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
                         [0, 0.5, 0.25, 0.16666, 0.125, 0.3],
                         [0, 1.0, 1.0, 1.0],
                         [0, 0.5, 0.5, 0.5]]
-        assert len(predictions) == len(targets) == len(ks) == len(expectations)
-        for preds, tgts, exps, k in zip(predictions, targets, expectations, ks):
+        assert len(self.PREDICTIONS) == len(self.TARGETS) == len(ks) == len(expectations)
+        for preds, tgts, exps, k in zip(self.PREDICTIONS, self.TARGETS, expectations, ks):
             for i in range(k):
                 precision_eval = PrecisionEvaluator(TopKPredictionFilter(i))
                 precision_eval.add_predictions(preds, tgts)

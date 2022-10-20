@@ -289,15 +289,15 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
         return super(PrecisionEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
 
     def _calculate(self, targets, predictions, average):
-        # '''
-        # There is a special case that needs to be handled appropriately.
-        # Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
-        # Since when average == 'samples' is only calculated for multilabel, sm.recall_score throws an exception. e.g.:
-        # predictions = np.array([[True]])
-        # targets = np.array([[True]])
-        # recall_score(targets, predictions, average='samples') throws the following error:
-        # ValueError: Samplewise metrics are not available outside of multilabel classification.
-        # '''
+        '''
+        There is a special case that needs to be handled appropriately.
+        Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
+        Since when average == 'samples' is only calculated for multilabel, sm.recall_score throws an exception. e.g.:
+        predictions = np.array([[True]])
+        targets = np.array([[True]])
+        recall_score(targets, predictions, average='samples') throws the following error:
+        ValueError: Samplewise metrics are not available outside of multilabel classification.
+        '''
         if targets.shape[1] == 1 and average == 'samples':
             targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
             predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
