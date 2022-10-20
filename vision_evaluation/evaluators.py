@@ -782,48 +782,9 @@ class BalancedAccuracyScoreEvaluator(MemorizingEverythingEvaluator):
         return 'balanced_accuracy'
 
 
-class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
+class PrecisionRecallCurveMixin():
     """
-    N-point interpolated average precision, averaged over classes
-    """
-
-    def __init__(self, n_points=11):
-        super().__init__()
-        self.ap_n_points_eval = []
-        self.n_points = n_points
-
-    def _calculate(self, targets, predictions, average):
-        n_class = predictions.shape[1]
-        return np.mean([self._per_class_calc(predictions[:, i], targets[:, i]) for i in range(n_class)])
-
-    def _per_class_calc(self, predictions, targets):
-        """ Evaluate a batch of predictions.
-        Args:
-            predictions: the probability of the data to be 'positive'. Shape (N,)
-            targets: the binary ground truths in {0, 1} or {-1, 1}. Shape (N,)
-        """
-        assert len(predictions) == len(targets)
-        assert len(targets.shape) == 1
-
-        precision, recall, _ = sm.precision_recall_curve(targets, predictions)
-        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
-        precision_sum = 0
-        recall_idx = 0
-        precision_tmp = 0
-        for threshold in recall_thresholds:
-            while recall_idx < len(recall) and threshold <= recall[recall_idx]:
-                precision_tmp = max(precision_tmp, precision[recall_idx])
-                recall_idx += 1
-            precision_sum += precision_tmp
-        return precision_sum / self.n_points
-
-    def _get_id(self):
-        return f'mAP_{self.n_points}_points'
-
-
-class PrecisionRecallCurveNPointsEvaluator(MemorizingEverythingEvaluator):
-    """
-    N-point interpolatedprecision-recall curve, averaged over samples
+    N-point interpolated precision-recall curve, averaged over samples
     """
 
     def __init__(self, n_points=11):
@@ -831,22 +792,7 @@ class PrecisionRecallCurveNPointsEvaluator(MemorizingEverythingEvaluator):
         self.ap_n_points_eval = []
         self.n_points = n_points
 
-    def calculate_score(self, average='samples'):
-        assert average == 'samples'
-        return super(PrecisionRecallCurveNPointsEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
-
-    def _calculate(self, targets, predictions, average):
-        assert average == 'samples'
-        n_samples = predictions.shape[0]
-        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
-        precision_averaged = np.zeros(self.n_points)
-        for i in range(n_samples):
-            precision_interp = self._per_sample_calc(predictions[i, :], targets[i, :], recall_thresholds)
-            precision_averaged += precision_interp
-        precision_averaged /= n_samples
-        return precision_averaged
-
-    def _per_sample_calc(self, predictions, targets, recall_thresholds):
+    def _calc_precision_recall_interp(self, predictions, targets, recall_thresholds):
         """ Evaluate a batch of predictions.
         Args:
             predictions: the probability or score of the data to be 'positive'. Shape (N,)
@@ -865,6 +811,41 @@ class PrecisionRecallCurveNPointsEvaluator(MemorizingEverythingEvaluator):
                 recall_idx += 1
             precision_interp.append(precision_tmp)
         return np.array(precision_interp)
+
+
+class MeanAveragePrecisionNPointsEvaluator(PrecisionRecallCurveMixin, MemorizingEverythingEvaluator):
+    """
+    N-point interpolated average precision, averaged over classes
+    """
+
+    def _calculate(self, targets, predictions, average):
+        n_class = predictions.shape[1]
+        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
+        return np.mean([np.mean(self._calc_precision_recall_interp(predictions[:, i], targets[:, i], recall_thresholds)) for i in range(n_class)])
+
+    def _get_id(self):
+        return f'mAP_{self.n_points}_points'
+
+
+class PrecisionRecallCurveNPointsEvaluator(PrecisionRecallCurveMixin, MemorizingEverythingEvaluator):
+    """
+    N-point interpolatedprecision-recall curve, averaged over samples
+    """
+
+    def calculate_score(self, average='samples'):
+        assert average == 'samples'
+        return super(PrecisionRecallCurveNPointsEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
+
+    def _calculate(self, targets, predictions, average):
+        assert average == 'samples'
+        n_samples = predictions.shape[0]
+        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
+        precision_averaged = np.zeros(self.n_points)
+        for i in range(n_samples):
+            precision_interp = self._calc_precision_recall_interp(predictions[i, :], targets[i, :], recall_thresholds)
+            precision_averaged += precision_interp
+        precision_averaged /= n_samples
+        return precision_averaged
 
     def _get_id(self):
         return f'PR_Curve_{self.n_points}_point_interp'
