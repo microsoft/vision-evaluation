@@ -42,6 +42,9 @@ This repo currently offers evaluation metrics for three vision tasks:
   - `L1ErrorEvaluator`:  computes the L1 error.
 - **Image regression**:
   - `MeanLpErrorEvaluator`: computes the mean Lp error (e.g. L1 error for p=1, L2 error for p=2, etc.).
+- **Image retrieval**:
+  - `RecallEvaluator(TopKPredictionFilter(k)))`: computes Recall@k, which is the percentage of relevant items in top-k among all relevant items
+  - `PrecisionEvaluator(TopKPredictionFilter(k))`: computes Precision@k, which is the percentage of TP among all items classified as P in top-k.
   
 While different machine learning problems/applications prefer different metrics, below are some general recommendations:
 
@@ -51,6 +54,7 @@ While different machine learning problems/applications prefer different metrics,
 - **Image caption**: Bleu, METEOR, ROUGE-L, CIDEr, SPICE
 - **Image matting**: Mean IOU, Foreground IOU, Boundary mean IOU, Boundary Foreground IOU, L1 Error
 - **Image regression**: Mean L1 Error, Mean L2 Error
+- **Image retrieval**: Recall@k, Precision@k
 
 ## Additional Requirements
 

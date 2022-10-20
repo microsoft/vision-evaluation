@@ -263,7 +263,53 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
     def _get_id(self):
         return f'precision_{self.prediction_filter.identifier}'
 
+    def calculate_score(self, average='macro'):
+        """
+        average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
+        If ``None``, the scores for each class are returned. Otherwise,
+        this determines the type of averaging performed on the data:
+
+        ``'micro'``:
+            Calculate metrics globally by considering each element of the label
+            indicator matrix as a label.
+        ``'macro'``:
+            Calculate metrics for each label, and find their unweighted
+            mean.  This does not take label imbalance into account.
+        ``'weighted'``:
+            Calculate metrics for each label, and find their average, weighted
+            by support (the number of true instances for each label).
+        ``'samples'``:
+            Calculate metrics for each instance, and find their average.
+
+        NOTE: A different path is required if we are in the multilabel setting, which is also applicable to information retrieval (e.g. image retrieval).
+        In this setting, we should retain all items that are classified as positive in order to correctly compute the precision.
+        Note that in multiclass this is not a problem since for a false negative precision is set to 0.
+        """
+        if not (self.all_targets.shape == self.all_predictions.shape and average == 'samples'):
+            return super(PrecisionEvaluator, self).calculate_score(average=average)
+
+        if self.all_predictions.size == 0:
+            return 0.0
+
+        result = 0.0
+        non_empty_idx = np.where(np.invert(np.all(self.all_predictions == 0, axis=0)))[0]
+        if non_empty_idx.size != 0:
+            result = self._calculate(self.all_targets[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
+        return result
+
     def _calculate(self, targets, predictions, average):
+        # '''
+        # There is a special case that needs to be handled appropriately.
+        # Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
+        # Since when average == 'samples' is only calculated for multilabel, sm.recall_score throws an exception. e.g.:
+        # predictions = np.array([[True]])
+        # targets = np.array([[True]])
+        # recall_score(targets, predictions, average='samples') throws the following error:
+        # ValueError: Samplewise metrics are not available outside of multilabel classification.
+        # '''
+        if targets.shape[1] == 1 and average == 'samples':
+            targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
+            predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
         return sm.precision_score(targets, predictions, average=average)
 
 
@@ -279,6 +325,18 @@ class RecallEvaluator(MemorizingEverythingEvaluator):
         return f'recall_{self.prediction_filter.identifier}'
 
     def _calculate(self, targets, predictions, average):
+        '''
+        There is a special case that needs to be handled appropriately.
+        Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
+        Since when average == 'samples' is only calculated for multilabel, sm.recall_score throws an exception. e.g.:
+        predictions = np.array([[True]])
+        targets = np.array([[True]])
+        recall_score(targets, predictions, average='samples') throws the following error:
+        ValueError: Samplewise metrics are not available outside of multilabel classification.
+        '''
+        if targets.shape[1] == 1 and average == 'samples':
+            targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
+            predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
         return sm.recall_score(targets, predictions, average=average)
 
 
