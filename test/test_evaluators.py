@@ -5,9 +5,9 @@ import pathlib
 from PIL import Image
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, \
-    CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, MeanIOUEvaluator, \
-    ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator
+    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, PrecisionRecallCurveNPointsEvaluator, \
+    BalancedAccuracyScoreEvaluator, CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, \
+    MeanIOUEvaluator, ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -895,3 +895,26 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
                 precision_eval = PrecisionEvaluator(TopKPredictionFilter(i))
                 precision_eval.add_predictions(preds, tgts)
                 self.assertAlmostEqual(precision_eval.get_report(average='samples')[f"precision_top{i}"], exps[i], places=4)
+
+    def test_precision_recall_curve(self):
+        predictions = [np.array([[5, 4, 3, 2, 1]]),
+                       np.array([[1, 3, 2, 5, 4]]),
+                       np.array([[5, 4, 3, 2, 1]]),
+                       np.array([[5, 4, 3, 2, 1],
+                                 [5, 4, 3, 2, 1]])]
+        targets = [np.array([[0, 0, 0, 0, 1]]),
+                   np.array([[1, 0, 0, 0, 0]]),
+                   np.array([[1, 0, 0, 0, 1]]),
+                   np.array([[0, 0, 0, 0, 1],
+                             [1, 0, 0, 0, 1]])]
+
+        expectations = [np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 1., ]),
+                        np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 1., ]),
+                        np.array([0.4, 0.4, 0.4, 0.4, 0.4, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, ]),
+                        np.array([0.3, 0.3, 0.3, 0.3, 0.3, 0.6, 0.6, 0.6, 0.6, 0.6, 1., ])]
+        assert len(predictions) == len(targets) == len(expectations)
+        for preds, tgts, exps in zip(predictions, targets, expectations):
+            n_points = 11
+            evaluator = PrecisionRecallCurveNPointsEvaluator(n_points)
+            evaluator.add_predictions(predictions=preds, targets=tgts)
+            self.assertAlmostEqual(np.sum(np.abs(evaluator.get_report(average='samples')[f"PR_Curve_{n_points}_point_interp"] - exps)), 0.0, places=4)

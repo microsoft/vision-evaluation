@@ -109,7 +109,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         else:
             self.all_targets = targets.copy()
 
-    def calculate_score(self, average='macro', filter_out_zero_tgt=True):
+    def calculate_score(self, average='macro', **kwargs):
         """
         average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
         If ``None``, the scores for each class are returned. Otherwise,
@@ -129,6 +129,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         filter_out_zero_tgt : bool
         Removes target columns that are all zero. For precision calculations this needs to be set to False, otherwise we could be removing FP
         """
+        filter_out_zero_tgt = kwargs.get('filter_out_zero_tgt', True)
         if self.all_predictions.size == 0:
             return 0.0
 
@@ -268,24 +269,6 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
         return f'precision_{self.prediction_filter.identifier}'
 
     def calculate_score(self, average='macro'):
-        """
-        average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
-        If ``None``, the scores for each class are returned. Otherwise,
-        this determines the type of averaging performed on the data:
-
-        ``'micro'``:
-            Calculate metrics globally by considering each element of the label
-            indicator matrix as a label.
-        ``'macro'``:
-            Calculate metrics for each label, and find their unweighted
-            mean.  This does not take label imbalance into account.
-        ``'weighted'``:
-            Calculate metrics for each label, and find their average, weighted
-            by support (the number of true instances for each label).
-        ``'samples'``:
-            Calculate metrics for each instance, and find their average.
-        """
-
         return super(PrecisionEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
 
     def _calculate(self, targets, predictions, average):
@@ -838,6 +821,55 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
         return f'mAP_{self.n_points}_points'
 
 
+class PrecisionRecallCurveNPointsEvaluator(MemorizingEverythingEvaluator):
+    """
+    N-point interpolatedprecision-recall curve, averaged over samples
+    """
+
+    def __init__(self, n_points=11):
+        super().__init__()
+        self.ap_n_points_eval = []
+        self.n_points = n_points
+
+    def calculate_score(self, average='samples'):
+        assert average == 'samples'
+        return super(PrecisionRecallCurveNPointsEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
+
+    def _calculate(self, targets, predictions, average):
+        assert average == 'samples'
+        n_samples = predictions.shape[0]
+        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
+        precision_averaged = np.zeros(self.n_points)
+        for i in range(n_samples):
+            precision_interp = self._per_sample_calc(predictions[i, :], targets[i, :], recall_thresholds)
+            precision_averaged += precision_interp
+        precision_averaged /= n_samples
+        return precision_averaged
+
+    def _per_sample_calc(self, predictions, targets, recall_thresholds):
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: the probability or score of the data to be 'positive'. Shape (N,)
+            targets: the binary ground truths in {0, 1} or {-1, 1}. Shape (N,)
+        """
+        assert len(predictions) == len(targets)
+        assert len(targets.shape) == 1
+
+        precision, recall, _ = sm.precision_recall_curve(targets, predictions)
+        precision_interp = []
+        recall_idx = 0
+        precision_tmp = 0
+        for threshold in recall_thresholds:
+            while recall_idx < len(recall) and threshold <= recall[recall_idx]:
+                precision_tmp = max(precision_tmp, precision[recall_idx])
+                recall_idx += 1
+            precision_interp.append(precision_tmp)
+        return np.array(precision_interp)
+
+    def _get_id(self):
+        return f'PR_Curve_{self.n_points}_point_interp'
+
+
 class ImageCaptionEvaluatorBase(Evaluator):
     """
     Base class for image caption metric evaluator
@@ -1168,7 +1200,7 @@ class MeanLpErrorEvaluator(Evaluator):
         self.total_error = 0
 
         super(MeanLpErrorEvaluator, self).__init__()
-        
+
     def reset(self):
         super(MeanLpErrorEvaluator, self).reset()
         self.total_num = 0
@@ -1190,6 +1222,6 @@ class MeanLpErrorEvaluator(Evaluator):
 
         self.total_error += sum(np.power(np.abs(predictions - targets), self.p))
         self.total_num += n_sample
-    
+
     def get_report(self, **kwargs):
         return {f'{self._get_id()}': (float(self.total_error)**(1 / self.p) / self.total_num) if self.total_num else 0.0}
