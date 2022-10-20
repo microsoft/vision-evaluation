@@ -109,7 +109,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         else:
             self.all_targets = targets.copy()
 
-    def calculate_score(self, average='macro'):
+    def calculate_score(self, average='macro', filter_out_zero_tgt=True):
         """
         average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
         If ``None``, the scores for each class are returned. Otherwise,
@@ -126,6 +126,8 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
             by support (the number of true instances for each label).
         ``'samples'``:
             Calculate metrics for each instance, and find their average.
+        filter_out_zero_tgt : bool
+        Removes target columns that are all zero. For precision calculations this needs to be set to False, otherwise we could be removing FP
         """
         if self.all_predictions.size == 0:
             return 0.0
@@ -134,7 +136,9 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         assert tar_mat.size == self.all_predictions.size
         result = 0.0
         if tar_mat.size > 0:
-            non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0]
+            non_empty_idx = np.array([x for x in range(tar_mat.shape[1])])
+            if filter_out_zero_tgt:
+                non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0]
             if non_empty_idx.size != 0:
                 result = self._calculate(tar_mat[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
 
@@ -280,22 +284,9 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
             by support (the number of true instances for each label).
         ``'samples'``:
             Calculate metrics for each instance, and find their average.
-
-        NOTE: A different path is required if we are in the multilabel setting, which is also applicable to information retrieval (e.g. image retrieval).
-        In this setting, we should retain all items that are classified as positive in order to correctly compute the precision.
-        Note that in multiclass this is not a problem since for a false negative precision is set to 0.
         """
-        if not (self.all_targets.shape == self.all_predictions.shape and average == 'samples'):
-            return super(PrecisionEvaluator, self).calculate_score(average=average)
 
-        if self.all_predictions.size == 0:
-            return 0.0
-
-        result = 0.0
-        non_empty_idx = np.where(np.invert(np.all(self.all_predictions == 0, axis=0)))[0]
-        if non_empty_idx.size != 0:
-            result = self._calculate(self.all_targets[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
-        return result
+        return super(PrecisionEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
 
     def _calculate(self, targets, predictions, average):
         # '''
