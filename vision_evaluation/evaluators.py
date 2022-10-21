@@ -272,7 +272,7 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
         return super(PrecisionEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
 
     def _calculate(self, targets, predictions, average):
-        '''
+        """
         There is a special case that needs to be handled appropriately.
         Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
         Since when average == 'samples' is only calculated for multilabel, sm.recall_score throws an exception. e.g.:
@@ -280,11 +280,65 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
         targets = np.array([[True]])
         recall_score(targets, predictions, average='samples') throws the following error:
         ValueError: Samplewise metrics are not available outside of multilabel classification.
-        '''
+        """
         if targets.shape[1] == 1 and average == 'samples':
             targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
             predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
         return sm.precision_score(targets, predictions, average=average)
+
+
+class MeanAveragePrecisionAtK(MemorizingEverythingEvaluator):
+    """
+    MeanAveragePrecision @ K as defined here:
+    https://stackoverflow.com/questions/54966320/mapk-computation
+    https://medium.com/@misty.mok/how-mean-average-precision-at-k-map-k-can-be-more-useful-than-other-evaluation-metrics-6881e0ee21a9
+    MAP@K is the average of AveP(K) over all queries. Hence it uses average="samples".
+    AveP(K) =  Num / Den, where:
+    Num = sum_i^k P(i) * rel(i), where:
+    P(i) is the Precision @ i
+    rel(i) is an indicator function where rel(i) = 1 if position i is relevant, and rel(i) = 0 otherwise.
+    Den = min(K, number of relevant images)
+    """
+
+    def __init__(self, rank):
+        super(MeanAveragePrecisionAtK, self).__init__()
+        self.rank = rank
+
+    def _get_id(self):
+        return f'map_top{self.rank}'
+
+    def calculate_score(self, average='samples'):
+        assert average == 'samples'
+        if self.rank == 0:
+            return 0.0
+        return self._calculate(average=average)
+
+    def _calculate(self, average='samples'):
+        assert self.all_predictions.shape == self.all_targets.shape
+        if self.all_predictions.size == 0:
+            return 0.0
+        return np.mean([self._average_precision_at_k(preds, targets) for preds, targets in zip(self.all_predictions, self.all_targets)])
+
+    def _average_precision_at_k(self, predictions, targets):
+        total_pos_gt = np.sum(targets)
+        if total_pos_gt == 0:
+            return 0.0
+        rank = min(self.rank, len(predictions))
+        precision_eval = PrecisionEvaluator(TopKPredictionFilter(rank))
+        precision_eval.add_predictions(np.expand_dims(predictions, axis=0), np.expand_dims(targets, axis=0))
+        score = precision_eval.calculate_score(average=None)
+        top_k_pred_indices = np.argpartition(-predictions, rank - 1)[:rank]
+        # sort score, gt by top_k
+        score = score[top_k_pred_indices]
+        targets = targets[top_k_pred_indices]
+        sum = 0.0
+        num_hits = 0.0
+        for idx, vals in enumerate(zip(score, targets)):
+            cur_score, cur_target = vals
+            if cur_target and cur_score:
+                num_hits += 1.0
+                sum += num_hits / (idx + 1.0)
+        return sum / min(rank, total_pos_gt)
 
 
 class RecallEvaluator(MemorizingEverythingEvaluator):
@@ -299,7 +353,7 @@ class RecallEvaluator(MemorizingEverythingEvaluator):
         return f'recall_{self.prediction_filter.identifier}'
 
     def _calculate(self, targets, predictions, average):
-        '''
+        """
         There is a special case that needs to be handled appropriately.
         Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
         Since when average == 'samples' is only calculated for multilabel, sm.recall_score throws an exception. e.g.:
@@ -307,7 +361,7 @@ class RecallEvaluator(MemorizingEverythingEvaluator):
         targets = np.array([[True]])
         recall_score(targets, predictions, average='samples') throws the following error:
         ValueError: Samplewise metrics are not available outside of multilabel classification.
-        '''
+        """
         if targets.shape[1] == 1 and average == 'samples':
             targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
             predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)

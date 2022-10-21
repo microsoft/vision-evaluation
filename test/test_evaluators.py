@@ -5,9 +5,10 @@ import pathlib
 from PIL import Image
 
 from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvaluator, TopKAccuracyEvaluator, ThresholdAccuracyEvaluator, MeanAveragePrecisionEvaluatorForSingleIOU, EceLossEvaluator, \
-    PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, MeanAveragePrecisionNPointsEvaluator, PrecisionRecallCurveNPointsEvaluator, \
-    BalancedAccuracyScoreEvaluator, CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, \
-    MeanIOUEvaluator, ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator
+    PrecisionEvaluator, MeanAveragePrecisionAtK, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, \
+    MeanAveragePrecisionNPointsEvaluator, PrecisionRecallCurveNPointsEvaluator, BalancedAccuracyScoreEvaluator, CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, \
+    ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, MeanIOUEvaluator, ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, \
+    L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -918,3 +919,38 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
             evaluator = PrecisionRecallCurveNPointsEvaluator(n_points)
             evaluator.add_predictions(predictions=preds, targets=tgts)
             self.assertAlmostEqual(np.sum(np.abs(evaluator.get_report(average='samples')[f"PR_Curve_{n_points}_point_interp"] - exps)), 0.0, places=4)
+
+    def test_average_precision_evaluator(self):
+        targets = [np.array([[1, 0, 1, 1],
+                             [1, 0, 0, 1]]),
+                   np.array([[1, 0, 1, 1]]),
+                   np.array([[1, 0, 0, 1]]),
+                   np.array([[]]),
+                   np.array([[1, 0, 1, 1]]),
+                   np.array([[1, 0, 1, 1]]),
+                   np.array([[1, 0, 1, 1]]),
+                   np.array([[1, 0, 1, 1]]),
+                   np.array([[1, 0, 1, 1]]),
+                   np.array([[1, 0, 1, 1]]),
+                   np.array([[0, 0, 0, 0]])]
+        predictions = [np.array([[5, 4, 3, 2],
+                                 [5, 4, 3, 2]]),
+                       np.array([[5, 4, 3, 2]]),
+                       np.array([[5, 4, 3, 2]]),
+                       np.array([[]]),
+                       np.array([[2, 3, 5, 4]]),
+                       np.array([[4, 2, 3, 5]]),
+                       np.array([[4, 2, 3, 5]]),
+                       np.array([[2, 3, 5, 4]]),
+                       np.array([[2, 3, 5, 4]]),
+                       np.array([[2, 3, 5, 4]]),
+                       np.array([[2, 3, 5, 4]])]
+        rank = [4, 4, 4, 4, 4, 4, 3, 3, 5, 2, 4]
+        expectations = [0.77777, 0.80555, 0.75, 0.0, 0.91666, 1.0, 1.0, 0.66666, 0.91666, 1.0, 0.0]
+
+        assert len(targets) == len(predictions) == len(rank) == len(expectations)
+
+        for preds, tgts, exps, k in zip(predictions, targets, expectations, rank):
+            evaluator = MeanAveragePrecisionAtK(k)
+            evaluator.add_predictions(preds, tgts)
+            self.assertAlmostEqual(evaluator.get_report(average='samples')[f"map_top{k}"], exps, places=4)
