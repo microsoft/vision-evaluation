@@ -118,8 +118,10 @@ class TestClassificationEvaluator(unittest.TestCase):
         for targets, predictions in zip(self.TARGETS, self.PREDICTIONS):
             top1_acc_evaluator = TopKAccuracyEvaluator(1)
             top1_acc_evaluator.add_predictions(predictions, targets)
+
             top1_prec_evaluator = PrecisionEvaluator(TopKPredictionFilter(1))
             top1_prec_evaluator.add_predictions(predictions, targets)
+
             self.assertEqual(top1_acc_evaluator.get_report()["accuracy_top1"], top1_prec_evaluator.get_report(average='samples')['precision_top1'])
 
     def test_average_precision_evaluator(self):
