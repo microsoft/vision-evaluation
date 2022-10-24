@@ -856,15 +856,15 @@ class PrecisionRecallCurveMixin():
         assert len(targets.shape) == 1
 
         precision, recall, _ = sm.precision_recall_curve(targets, predictions)
-        precision_interp = []
+        precision_interp = np.empty(len(recall_thresholds))
         recall_idx = 0
         precision_tmp = 0
-        for threshold in recall_thresholds:
+        for idx, threshold in enumerate(recall_thresholds):
             while recall_idx < len(recall) and threshold <= recall[recall_idx]:
                 precision_tmp = max(precision_tmp, precision[recall_idx])
                 recall_idx += 1
-            precision_interp.append(precision_tmp)
-        return np.array(precision_interp)
+            precision_interp[idx] = precision_tmp
+        return precision_interp
 
 
 class MeanAveragePrecisionNPointsEvaluator(PrecisionRecallCurveMixin, MemorizingEverythingEvaluator):
