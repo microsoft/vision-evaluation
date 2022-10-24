@@ -137,7 +137,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         assert tar_mat.size == self.all_predictions.size
         result = 0.0
         if tar_mat.size > 0:
-            non_empty_idx = np.array([x for x in range(tar_mat.shape[1])])
+            non_empty_idx = np.array([x for x in np.arange(tar_mat.shape[1])])
             if filter_out_zero_tgt:
                 non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0]
             if non_empty_idx.size != 0:
