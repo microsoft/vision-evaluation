@@ -43,7 +43,7 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
             for i in range(k):
                 recall_eval = RecallAtKEvaluator(i)
                 recall_eval.add_predictions(preds, tgts)
-                self.assertAlmostEqual(recall_eval.get_report(average='samples')[f"recall_at_{i}"], exps[i], places=4)
+                self.assertAlmostEqual(recall_eval.get_report()[f"recall_at_{i}"], exps[i], places=4)
 
     def test_precision_at_k(self):
         ks = [6, 8, 6, 6, 6, 6, 4, 4]
@@ -60,7 +60,7 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
             for i in range(k):
                 precision_eval = PrecisionAtKEvaluator(i)
                 precision_eval.add_predictions(preds, tgts)
-                self.assertAlmostEqual(precision_eval.get_report(average='samples')[f"precision_at_{i}"], exps[i], places=4)
+                self.assertAlmostEqual(precision_eval.get_report()[f"precision_at_{i}"], exps[i], places=4)
 
     def test_precision_recall_curve(self):
         predictions = [np.array([[5, 4, 3, 2, 1]]),
@@ -83,7 +83,7 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
             n_points = 11
             evaluator = PrecisionRecallCurveNPointsEvaluator(n_points)
             evaluator.add_predictions(predictions=preds, targets=tgts)
-            self.assertAlmostEqual(np.sum(np.abs(evaluator.get_report(average='samples')[f"PR_Curve_{n_points}_point_interp"] - exps)), 0.0, places=4)
+            self.assertAlmostEqual(np.sum(np.abs(evaluator.get_report()[f"PR_Curve_{n_points}_point_interp"] - exps)), 0.0, places=4)
 
     def test_mean_average_precision_at_k_evaluator(self):
         targets = [np.array([[1, 0, 1, 1],
@@ -120,4 +120,4 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
         for preds, tgts, exps, k in zip(predictions, targets, expectations, rank):
             evaluator = MeanAveragePrecisionAtK(k)
             evaluator.add_predictions(preds, tgts)
-            self.assertAlmostEqual(evaluator.get_report(average='samples')[f"map_at_{k}"], exps, places=4)
+            self.assertAlmostEqual(evaluator.get_report()[f"map_at_{k}"], exps, places=4)
