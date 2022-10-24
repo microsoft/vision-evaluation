@@ -321,18 +321,13 @@ class MeanAveragePrecisionAtK(MemorizingEverythingEvaluator):
         if total_pos_gt == 0:
             return 0.0
         rank = min(self.k, len(predictions))
-        precision_eval = PrecisionEvaluator(TopKPredictionFilter(rank))
-        precision_eval.add_predictions(np.expand_dims(predictions, axis=0), np.expand_dims(targets, axis=0))
-        score = precision_eval.calculate_score(average=None)
         top_k_pred_indices = np.argpartition(-predictions, rank - 1)[:rank]
         # sort score, gt by top_k
-        score = score[top_k_pred_indices]
         targets = targets[top_k_pred_indices]
         sum = 0.0
         num_hits = 0.0
-        for idx, vals in enumerate(zip(score, targets)):
-            cur_score, cur_target = vals
-            if cur_target and cur_score:
+        for idx, tgt in enumerate(targets):
+            if tgt:
                 num_hits += 1.0
                 sum += num_hits / (idx + 1.0)
         return sum / min(rank, total_pos_gt)
