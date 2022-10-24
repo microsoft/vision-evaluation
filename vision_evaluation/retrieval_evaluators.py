@@ -15,7 +15,7 @@ class RetrievalEvaluator(MemorizingEverythingEvaluator):
         super(RetrievalEvaluator, self).add_predictions(predictions, targets)
 
     def get_report(self):
-        return {self._get_id(): self.calculate_score(average='samples')}
+        return super(RetrievalEvaluator, self).get_report(average='samples')
 
 
 class PrecisionAtKEvaluator(RetrievalEvaluator):
