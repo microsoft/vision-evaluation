@@ -922,7 +922,7 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
             evaluator.add_predictions(predictions=preds, targets=tgts)
             self.assertAlmostEqual(np.sum(np.abs(evaluator.get_report(average='samples')[f"PR_Curve_{n_points}_point_interp"] - exps)), 0.0, places=4)
 
-    def test_average_precision_evaluator(self):
+    def test_mean_average_precision_at_k_evaluator(self):
         targets = [np.array([[1, 0, 1, 1],
                              [1, 0, 0, 1]]),
                    np.array([[1, 0, 1, 1]]),

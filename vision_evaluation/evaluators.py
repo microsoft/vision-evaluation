@@ -137,9 +137,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         assert tar_mat.size == self.all_predictions.size
         result = 0.0
         if tar_mat.size > 0:
-            non_empty_idx = np.array([x for x in np.arange(tar_mat.shape[1])])
-            if filter_out_zero_tgt:
-                non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0]
+            non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0] if filter_out_zero_tgt else np.array([x for x in np.arange(tar_mat.shape[1])])
             if non_empty_idx.size != 0:
                 result = self._calculate(tar_mat[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
 
@@ -300,20 +298,20 @@ class MeanAveragePrecisionAtK(MemorizingEverythingEvaluator):
     Den = min(K, number of relevant images)
     """
 
-    def __init__(self, rank):
+    def __init__(self, k):
         super(MeanAveragePrecisionAtK, self).__init__()
-        self.rank = rank
+        self.k = k
 
     def _get_id(self):
-        return f'map_top{self.rank}'
+        return f'map_top{self.k}'
 
     def calculate_score(self, average='samples'):
         assert average == 'samples'
-        if self.rank == 0:
+        if self.k == 0:
             return 0.0
-        return self._calculate(average=average)
+        return self._calculate()
 
-    def _calculate(self, average='samples'):
+    def _calculate(self):
         assert self.all_predictions.shape == self.all_targets.shape
         if self.all_predictions.size == 0:
             return 0.0
@@ -323,7 +321,7 @@ class MeanAveragePrecisionAtK(MemorizingEverythingEvaluator):
         total_pos_gt = np.sum(targets)
         if total_pos_gt == 0:
             return 0.0
-        rank = min(self.rank, len(predictions))
+        rank = min(self.k, len(predictions))
         precision_eval = PrecisionEvaluator(TopKPredictionFilter(rank))
         precision_eval.add_predictions(np.expand_dims(predictions, axis=0), np.expand_dims(targets, axis=0))
         score = precision_eval.calculate_score(average=None)
