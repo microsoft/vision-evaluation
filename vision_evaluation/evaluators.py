@@ -109,7 +109,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         else:
             self.all_targets = targets.copy()
 
-    def calculate_score(self, average='macro', **kwargs):
+    def calculate_score(self, average='macro', filter_out_zero_tgt=True, **kwargs):
         """
         average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
         If ``None``, the scores for each class are returned. Otherwise,
@@ -129,7 +129,6 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         filter_out_zero_tgt : bool
         Removes target columns that are all zero. For precision calculations this needs to be set to False, otherwise we could be removing FP
         """
-        filter_out_zero_tgt = kwargs.get('filter_out_zero_tgt', True)
         if self.all_predictions.size == 0:
             return 0.0
 
@@ -266,8 +265,8 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
     def _get_id(self):
         return f'precision_{self.prediction_filter.identifier}'
 
-    def calculate_score(self, average='macro'):
-        return super(PrecisionEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
+    def calculate_score(self, average='macro', filter_out_zero_tgt=False):
+        return super(PrecisionEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)
 
     def _calculate(self, targets, predictions, average):
         """
@@ -377,9 +376,9 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
     def _get_id(self):
         return 'average_precision'
 
-    def calculate_score(self, average='macro'):
+    def calculate_score(self, average='macro', filter_out_zero_tgt=True):
         if average != 'macro':
-            return super().calculate_score(average)
+            return super().calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)
 
         ap = 0.0
         if self.all_targets.size == 0:
@@ -884,9 +883,9 @@ class PrecisionRecallCurveNPointsEvaluator(PrecisionRecallCurveMixin, Memorizing
     N-point interpolatedprecision-recall curve, averaged over samples
     """
 
-    def calculate_score(self, average='samples'):
+    def calculate_score(self, average='samples', filter_out_zero_tgt=False):
         assert average == 'samples'
-        return super(PrecisionRecallCurveNPointsEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=False)
+        return super(PrecisionRecallCurveNPointsEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)
 
     def _calculate(self, targets, predictions, average):
         assert average == 'samples'
