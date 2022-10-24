@@ -43,8 +43,8 @@ This repo currently offers evaluation metrics for three vision tasks:
 - **Image regression**:
   - `MeanLpErrorEvaluator`: computes the mean Lp error (e.g. L1 error for p=1, L2 error for p=2, etc.).
 - **Image retrieval**:
-  - `RecallEvaluator(TopKPredictionFilter(k)))`: computes Recall@k, which is the percentage of relevant items in top-k among all relevant items
-  - `PrecisionEvaluator(TopKPredictionFilter(k))`: computes Precision@k, which is the percentage of TP among all items classified as P in top-k.
+  - `RecallAtKEvaluator(k)`: computes Recall@k, which is the percentage of relevant items in top-k among all relevant items
+  - `PrecisionAtKEvaluator(k)`: computes Precision@k, which is the percentage of TP among all items classified as P in top-k.
   - `MeanAveragePrecisionAtK(k)`: computes [Mean Average Precision@k](https://stackoverflow.com/questions/54966320/mapk-computation), an information retrieval metric.
   - `PrecisionRecallCurveNPointsEvaluator(k)`: computes a Precision-Recall Curve, interpolated at k points and averaged over all samples. 
   
