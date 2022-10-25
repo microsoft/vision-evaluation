@@ -15,7 +15,7 @@ class RetrievalEvaluator(MemorizingEverythingEvaluator):
         super(RetrievalEvaluator, self).add_predictions(predictions, targets)
 
     def get_report(self):
-        return super(RetrievalEvaluator, self).get_report(average='samples')
+        return {self._get_id(): self.calculate_score()}
 
 
 class PrecisionAtKEvaluator(RetrievalEvaluator):
@@ -30,10 +30,10 @@ class PrecisionAtKEvaluator(RetrievalEvaluator):
     def _get_id(self):
         return f'precision_at_{self.k}'
 
-    def calculate_score(self, average='macro', filter_out_zero_tgt=False):
-        return super(PrecisionAtKEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)
+    def calculate_score(self):
+        return super(PrecisionAtKEvaluator, self).calculate_score(average='samples', filter_out_zero_tgt=False)
 
-    def _calculate(self, targets, predictions, average):
+    def _calculate(self, targets, predictions, average='samples'):
         """
         There is a special case that needs to be handled appropriately.
         Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
@@ -43,7 +43,8 @@ class PrecisionAtKEvaluator(RetrievalEvaluator):
         recall_score(targets, predictions, average='samples') throws the following error:
         ValueError: Samplewise metrics are not available outside of multilabel classification.
         """
-        if targets.shape[1] == 1 and average == 'samples':
+        assert average == 'samples'
+        if targets.shape[1] == 1:
             targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
             predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
         return sm.precision_score(targets, predictions, average=average)
@@ -61,7 +62,10 @@ class RecallAtKEvaluator(RetrievalEvaluator):
     def _get_id(self):
         return f'recall_at_{self.k}'
 
-    def _calculate(self, targets, predictions, average):
+    def calculate_score(self):
+        return super(RecallAtKEvaluator, self).calculate_score(average='samples', filter_out_zero_tgt=True)
+
+    def _calculate(self, targets, predictions, average='samples'):
         """
         There is a special case that needs to be handled appropriately.
         Due to filtering conditions, there are occasions where only 1 class remains in targets/predictions and sklearn interpretes this as an invalid configuration for multilabel.
@@ -71,7 +75,8 @@ class RecallAtKEvaluator(RetrievalEvaluator):
         recall_score(targets, predictions, average='samples') throws the following error:
         ValueError: Samplewise metrics are not available outside of multilabel classification.
         """
-        if targets.shape[1] == 1 and average == 'samples':
+        assert average == 'samples'
+        if targets.shape[1] == 1:
             targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
             predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
         return sm.recall_score(targets, predictions, average=average)
@@ -97,8 +102,7 @@ class MeanAveragePrecisionAtK(RetrievalEvaluator):
     def _get_id(self):
         return f'map_at_{self.k}'
 
-    def calculate_score(self, average='samples'):
-        assert average == 'samples'
+    def calculate_score(self):
         if self.k == 0:
             return 0.0
         return self._calculate()
@@ -131,9 +135,8 @@ class PrecisionRecallCurveNPointsEvaluator(PrecisionRecallCurveMixin, RetrievalE
     N-point interpolatedprecision-recall curve, averaged over samples
     """
 
-    def calculate_score(self, average='samples', filter_out_zero_tgt=False):
-        assert average == 'samples'
-        return super(PrecisionRecallCurveNPointsEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)
+    def calculate_score(self):
+        return super(PrecisionRecallCurveNPointsEvaluator, self).calculate_score(average='samples', filter_out_zero_tgt=False)
 
     def _calculate(self, targets, predictions, average):
         assert average == 'samples'
