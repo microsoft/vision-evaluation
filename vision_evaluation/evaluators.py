@@ -270,8 +270,7 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
 
     def get_report(self, **kwargs):
         average = kwargs.get('average', 'macro')
-        filter_out_zero_tgt = kwargs.get('filter_out_zero_tgt', False)
-        return {self._get_id(): self.calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)}
+        return {self._get_id(): self.calculate_score(average=average, filter_out_zero_tgt=False)}
 
 
 class RecallEvaluator(MemorizingEverythingEvaluator):

@@ -14,9 +14,6 @@ class RetrievalEvaluator(MemorizingEverythingEvaluator):
         """
         super(RetrievalEvaluator, self).add_predictions(predictions, targets)
 
-    def get_report(self):
-        return {self._get_id(): self.calculate_score()}
-
 
 class PrecisionAtKEvaluator(RetrievalEvaluator):
     """
@@ -29,9 +26,6 @@ class PrecisionAtKEvaluator(RetrievalEvaluator):
 
     def _get_id(self):
         return f'precision_at_{self.k}'
-
-    def calculate_score(self):
-        return super(PrecisionAtKEvaluator, self).calculate_score(average='samples', filter_out_zero_tgt=False)
 
     def _calculate(self, targets, predictions, average='samples'):
         """
@@ -49,6 +43,9 @@ class PrecisionAtKEvaluator(RetrievalEvaluator):
             predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
         return sm.precision_score(targets, predictions, average=average)
 
+    def get_report(self):
+        return {self._get_id(): self.calculate_score(average='samples', filter_out_zero_tgt=False)}
+
 
 class RecallAtKEvaluator(RetrievalEvaluator):
     """
@@ -61,9 +58,6 @@ class RecallAtKEvaluator(RetrievalEvaluator):
 
     def _get_id(self):
         return f'recall_at_{self.k}'
-
-    def calculate_score(self):
-        return super(RecallAtKEvaluator, self).calculate_score(average='samples', filter_out_zero_tgt=True)
 
     def _calculate(self, targets, predictions, average='samples'):
         """
@@ -80,6 +74,9 @@ class RecallAtKEvaluator(RetrievalEvaluator):
             targets = np.append(targets, np.zeros((targets.shape[0], 1)), axis=1)
             predictions = np.append(predictions, np.zeros((predictions.shape[0], 1)), axis=1)
         return sm.recall_score(targets, predictions, average=average)
+
+    def get_report(self):
+        return {self._get_id(): self.calculate_score(average='samples')}
 
 
 class MeanAveragePrecisionAtK(RetrievalEvaluator):
@@ -129,6 +126,9 @@ class MeanAveragePrecisionAtK(RetrievalEvaluator):
                 sum += num_hits / (idx + 1.0)
         return sum / min(rank, total_pos_gt)
 
+    def get_report(self):
+        return {self._get_id(): self.calculate_score()}
+
 
 class PrecisionRecallCurveNPointsEvaluator(PrecisionRecallCurveMixin, RetrievalEvaluator):
     """
@@ -154,3 +154,6 @@ class PrecisionRecallCurveNPointsEvaluator(PrecisionRecallCurveMixin, RetrievalE
 
     def _get_id(self):
         return f'PR_Curve_{self.n_points}_point_interp'
+
+    def get_report(self):
+        return {self._get_id(): self.calculate_score()}
