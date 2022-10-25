@@ -74,16 +74,26 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
                    np.array([[0, 0, 0, 0, 1],
                              [1, 0, 0, 0, 1]])]
 
-        expectations = [np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 1., ]),
-                        np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 1., ]),
-                        np.array([0.4, 0.4, 0.4, 0.4, 0.4, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, ]),
-                        np.array([0.3, 0.3, 0.3, 0.3, 0.3, 0.6, 0.6, 0.6, 0.6, 0.6, 1., ])]
-        assert len(predictions) == len(targets) == len(expectations)
-        for preds, tgts, exps in zip(predictions, targets, expectations):
+        expectations_recall = [np.array([1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.39999, 0.29999, 0.19999, 0.09999, 0.0]),
+                               np.array([1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.39999, 0.29999, 0.19999, 0.09999, 0.0]),
+                               np.array([1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.39999, 0.29999, 0.19999, 0.09999, 0.0]),
+                               np.array([1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.39999, 0.29999, 0.19999, 0.09999, 0.0])]
+
+        expectations_precision = [np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 1., ]),
+                                  np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 1., ]),
+                                  np.array([0.4, 0.4, 0.4, 0.4, 0.4, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, ]),
+                                  np.array([0.3, 0.3, 0.3, 0.3, 0.3, 0.6, 0.6, 0.6, 0.6, 0.6, 1., ])]
+
+        assert len(predictions) == len(targets) == len(expectations_recall) == len(expectations_precision)
+        for preds, tgts, exp_r, exp_p in zip(predictions, targets, expectations_recall, expectations_precision):
             n_points = 11
             evaluator = PrecisionRecallCurveNPointsEvaluator(n_points)
             evaluator.add_predictions(predictions=preds, targets=tgts)
-            self.assertAlmostEqual(np.sum(np.abs(evaluator.get_report()[f"PR_Curve_{n_points}_point_interp"] - exps)), 0.0, places=4)
+            result = evaluator.get_report()
+            result_recall = result[f"PR_Curve_{n_points}_point_interp"]['recall']
+            precision_recall = result[f"PR_Curve_{n_points}_point_interp"]['precision']
+            self.assertAlmostEqual(np.sum(np.abs(result_recall - exp_r)), 0.0, places=4)
+            self.assertAlmostEqual(np.sum(np.abs(precision_recall - exp_p)), 0.0, places=4)
 
     def test_mean_average_precision_at_k_evaluator(self):
         targets = [np.array([[1, 0, 1, 1],

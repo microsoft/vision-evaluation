@@ -147,7 +147,10 @@ class PrecisionRecallCurveNPointsEvaluator(PrecisionRecallCurveMixin, RetrievalE
             precision_interp = self._calc_precision_recall_interp(predictions[i, :], targets[i, :], recall_thresholds)
             precision_averaged += precision_interp
         precision_averaged /= n_samples
-        return precision_averaged
+        out = dict()
+        out['recall'] = recall_thresholds
+        out['precision'] = precision_averaged
+        return out
 
     def _get_id(self):
         return f'PR_Curve_{self.n_points}_point_interp'
