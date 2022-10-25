@@ -9,8 +9,8 @@ class RetrievalEvaluator(MemorizingEverythingEvaluator):
     def add_predictions(self, predictions, targets):
         """ Add a batch of predictions for evaluation.
         Args:
-            predictions: the model output array. Shape (N, M) where N is the number of queries and M is the number of items in the dataset
-            targets: the ground truths. Shape (N, M) where N is the number of queries and M is the number of items in the dataset
+            predictions: the model output array. np.array() with shape (N, M) where N is the number of queries and M is the number of items in the dataset. Real valued.
+            targets: the ground truths. np.array() with shape (N, M) where N is the number of queries and M is the number of items in the dataset. Values: bool or 0/1.
         """
         super(RetrievalEvaluator, self).add_predictions(predictions, targets)
 
