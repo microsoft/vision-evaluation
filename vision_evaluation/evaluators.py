@@ -109,7 +109,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         else:
             self.all_targets = targets.copy()
 
-    def calculate_score(self, average='macro', filter_out_zero_tgt=True, **kwargs):
+    def calculate_score(self, average='macro', filter_out_zero_tgt=True):
         """
         average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
         If ``None``, the scores for each class are returned. Otherwise,
@@ -265,11 +265,13 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
     def _get_id(self):
         return f'precision_{self.prediction_filter.identifier}'
 
-    def calculate_score(self, average='macro', filter_out_zero_tgt=False):
-        return super(PrecisionEvaluator, self).calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)
-
     def _calculate(self, targets, predictions, average):
         return sm.precision_score(targets, predictions, average=average)
+
+    def get_report(self, **kwargs):
+        average = kwargs.get('average', 'macro')
+        filter_out_zero_tgt = kwargs.get('filter_out_zero_tgt', False)
+        return {self._get_id(): self.calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)}
 
 
 class RecallEvaluator(MemorizingEverythingEvaluator):
@@ -298,9 +300,9 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
     def _get_id(self):
         return 'average_precision'
 
-    def calculate_score(self, average='macro', filter_out_zero_tgt=True):
+    def calculate_score(self, average='macro'):
         if average != 'macro':
-            return super().calculate_score(average=average, filter_out_zero_tgt=filter_out_zero_tgt)
+            return super().calculate_score(average=average)
 
         ap = 0.0
         if self.all_targets.size == 0:
