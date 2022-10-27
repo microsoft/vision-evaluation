@@ -99,16 +99,16 @@ class MeanAveragePrecisionAtK(RetrievalEvaluator):
     def _get_id(self):
         return f'map_at_{self.k}'
 
-    def calculate_score(self):
+    def calculate_score(self, average='samples', filter_out_zero_tgt=False):
         if self.k == 0:
             return 0.0
-        return self._calculate()
+        return self._calculate(self.all_targets, self.all_predictions, average=average)
 
-    def _calculate(self):
-        assert self.all_predictions.shape == self.all_targets.shape
+    def _calculate(self, targets, predictions, average):
+        assert targets.shape == predictions.shape
         if self.all_predictions.size == 0:
             return 0.0
-        return np.mean([self._average_precision_at_k(preds, targets) for preds, targets in zip(self.all_predictions, self.all_targets)])
+        return np.mean([self._average_precision_at_k(preds, tgts) for preds, tgts in zip(self.all_predictions, self.all_targets)])
 
     def _average_precision_at_k(self, predictions, targets):
         total_pos_gt = np.sum(targets)
