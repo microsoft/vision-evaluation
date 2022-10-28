@@ -109,7 +109,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         else:
             self.all_targets = targets.copy()
 
-    def calculate_score(self, average='macro'):
+    def calculate_score(self, average='macro', filter_out_zero_tgt=True):
         """
         average : string, [None, 'micro', 'macro' (default), 'samples', 'weighted']
         If ``None``, the scores for each class are returned. Otherwise,
@@ -126,6 +126,8 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
             by support (the number of true instances for each label).
         ``'samples'``:
             Calculate metrics for each instance, and find their average.
+        filter_out_zero_tgt : bool
+        Removes target columns that are all zero. For precision calculations this needs to be set to False, otherwise we could be removing FP
         """
         if self.all_predictions.size == 0:
             return 0.0
@@ -134,7 +136,7 @@ class MemorizingEverythingEvaluator(Evaluator, ABC):
         assert tar_mat.size == self.all_predictions.size
         result = 0.0
         if tar_mat.size > 0:
-            non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0]
+            non_empty_idx = np.where(np.invert(np.all(tar_mat == 0, axis=0)))[0] if filter_out_zero_tgt else np.arange(tar_mat.shape[1])
             if non_empty_idx.size != 0:
                 result = self._calculate(tar_mat[:, non_empty_idx], self.all_predictions[:, non_empty_idx], average=average)
 
@@ -266,6 +268,10 @@ class PrecisionEvaluator(MemorizingEverythingEvaluator):
     def _calculate(self, targets, predictions, average):
         return sm.precision_score(targets, predictions, average=average)
 
+    def get_report(self, **kwargs):
+        average = kwargs.get('average', 'macro')
+        return {self._get_id(): self.calculate_score(average=average, filter_out_zero_tgt=False)}
+
 
 class RecallEvaluator(MemorizingEverythingEvaluator):
     """
@@ -295,7 +301,7 @@ class AveragePrecisionEvaluator(MemorizingEverythingEvaluator):
 
     def calculate_score(self, average='macro'):
         if average != 'macro':
-            return super().calculate_score(average)
+            return super().calculate_score(average=average)
 
         ap = 0.0
         if self.all_targets.size == 0:
@@ -751,9 +757,9 @@ class BalancedAccuracyScoreEvaluator(MemorizingEverythingEvaluator):
         return 'balanced_accuracy'
 
 
-class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
+class PrecisionRecallCurveMixin():
     """
-    N-point interpolated average precision, averaged over classes
+    N-point interpolated precision-recall curve, averaged over samples
     """
 
     def __init__(self, n_points=11):
@@ -761,30 +767,36 @@ class MeanAveragePrecisionNPointsEvaluator(MemorizingEverythingEvaluator):
         self.ap_n_points_eval = []
         self.n_points = n_points
 
-    def _calculate(self, targets, predictions, average):
-        n_class = predictions.shape[1]
-        return np.mean([self._per_class_calc(predictions[:, i], targets[:, i]) for i in range(n_class)])
-
-    def _per_class_calc(self, predictions, targets):
+    def _calc_precision_recall_interp(self, predictions, targets, recall_thresholds):
         """ Evaluate a batch of predictions.
         Args:
-            predictions: the probability of the data to be 'positive'. Shape (N,)
+            predictions: the probability or score of the data to be 'positive'. Shape (N,)
             targets: the binary ground truths in {0, 1} or {-1, 1}. Shape (N,)
         """
         assert len(predictions) == len(targets)
         assert len(targets.shape) == 1
 
         precision, recall, _ = sm.precision_recall_curve(targets, predictions)
-        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
-        precision_sum = 0
+        precision_interp = np.empty(len(recall_thresholds))
         recall_idx = 0
         precision_tmp = 0
-        for threshold in recall_thresholds:
+        for idx, threshold in enumerate(recall_thresholds):
             while recall_idx < len(recall) and threshold <= recall[recall_idx]:
                 precision_tmp = max(precision_tmp, precision[recall_idx])
                 recall_idx += 1
-            precision_sum += precision_tmp
-        return precision_sum / self.n_points
+            precision_interp[idx] = precision_tmp
+        return precision_interp
+
+
+class MeanAveragePrecisionNPointsEvaluator(PrecisionRecallCurveMixin, MemorizingEverythingEvaluator):
+    """
+    N-point interpolated average precision, averaged over classes
+    """
+
+    def _calculate(self, targets, predictions, average):
+        n_class = predictions.shape[1]
+        recall_thresholds = np.linspace(1, 0, self.n_points, endpoint=True).tolist()
+        return np.mean([np.mean(self._calc_precision_recall_interp(predictions[:, i], targets[:, i], recall_thresholds)) for i in range(n_class)])
 
     def _get_id(self):
         return f'mAP_{self.n_points}_points'
