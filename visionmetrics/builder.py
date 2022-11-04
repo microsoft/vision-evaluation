@@ -2,7 +2,7 @@ from .evaluators import ClassificationMulticlassEvaluator, ClassificationMultila
 from .metrics import create_metrics, get_metrics_names
 
 
-class EvaluationBuilder:
+class EvaluatorBuilder:
     EVALUATOR_CLASSES = {'classification_multiclass': ClassificationMulticlassEvaluator,
                          'classification_multilabel': ClassificationMultilabelEvaluator,
                          'object_detection': ObjectDetectionEvaluator}

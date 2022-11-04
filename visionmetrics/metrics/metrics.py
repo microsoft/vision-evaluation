@@ -35,12 +35,3 @@ class MetricsRegistry:
     @classmethod
     def get_names(cls, task_type):
         return cls._registry[task_type].keys()
-
-
-def create_metrics(task_type, metrics_name, **kwargs):
-    metrics_class = MetricsRegistry.get(task_type, metrics_name)
-    return metrics_class(**kwargs)
-
-
-def get_metrics_names(task_type):
-    return MetricsRegistry.get_names(task_type)
