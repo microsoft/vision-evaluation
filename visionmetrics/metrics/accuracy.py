@@ -1,9 +1,9 @@
 import numpy as np
-from .metrics import MetricsRegister, Metrics
+from .metrics import MetricsRegistry, Metrics
 from .prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
-@MetricsRegister.register('topk_accuracy', 'classification_multiclass')
+@MetricsRegistry.register('topk_accuracy', 'classification_multiclass')
 class TopKAccuracyMetrics(Metrics):
     """Top k accuracy evaluator for multiclass classification"""
 
@@ -52,7 +52,7 @@ def _targets_to_mat(targets, n_class):
     return target_mat
 
 
-@MetricsRegister.register('threshold_accuracy', ('classification_multiclass', 'classification_multilabel'))
+@MetricsRegistry.register('threshold_accuracy', ('classification_multiclass', 'classification_multilabel'))
 class ThresholdAccuracyMetrics(Metrics):
     """Threshold-based accuracy evaluator for multilabel classification, calculated in a sample-based flavor
     Note that

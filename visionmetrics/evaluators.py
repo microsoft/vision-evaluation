@@ -27,6 +27,8 @@ class Evaluator:
     def reset(self):
         for s in self._context.states:
             s.reset()
+        for m in self._metrics:
+            m.reset()
 
     def validate_predictions(self, predictions, targets):
         raise NotImplementedError

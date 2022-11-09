@@ -3,7 +3,7 @@ import collections
 
 class Metrics:
     def __init__(self, context):
-        pass
+        self.reset()
 
     @property
     def key_name(self):
@@ -13,6 +13,9 @@ class Metrics:
         raise NotImplementedError
 
     def add_predictions(self, predictions, targets):
+        pass
+
+    def reset(self):
         pass
 
 
@@ -34,4 +37,4 @@ class MetricsRegistry:
 
     @classmethod
     def get_names(cls, task_type):
-        return cls._registry[task_type].keys()
+        return list(cls._registry[task_type].keys())
