@@ -115,9 +115,10 @@ class MeanAveragePrecisionAtK(RetrievalEvaluator):
         if total_pos_gt == 0:
             return 0.0
         rank = min(self.k, len(predictions))
-        top_k_pred_indices = np.argpartition(-predictions, rank - 1)[:rank]
+        top_k_pred_indices_unsorted = np.argpartition(-predictions, rank - 1)[:rank]  # get indices of topk
+        top_k_pred_indices_sorted = top_k_pred_indices_unsorted[np.argsort(-predictions[top_k_pred_indices_unsorted])]  # sort topk and get their indices
         # sort score, gt by top_k
-        targets = targets[top_k_pred_indices]
+        targets = targets[top_k_pred_indices_sorted]
         sum = 0.0
         num_hits = 0.0
         for idx, tgt in enumerate(targets):
