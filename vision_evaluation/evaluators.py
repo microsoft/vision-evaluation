@@ -1063,7 +1063,7 @@ class L1ErrorEvaluator(MattingEvaluatorBase):
         for pred_mask, gt_mask in zip(predictions, targets):
             pred_mask = np.asarray(pred_mask)
             gt_mask = np.asarray(gt_mask)
-            mean_l1 = np.abs(pred_mask.astype(np.float)-gt_mask.astype(np.float)).mean()
+            mean_l1 = np.abs(pred_mask.astype(float)-gt_mask.astype(float)).mean()
             self._metric_sum += mean_l1
 
 
