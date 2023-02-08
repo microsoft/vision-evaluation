@@ -108,7 +108,8 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
                    np.array([[1, 0, 1, 1]]),
                    np.array([[1, 0, 1, 1]]),
                    np.array([[0, 0, 0, 0]]),
-                   np.array([[1, 0, 1]])]
+                   np.array([[1, 0, 1]]),
+                   np.array([[1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1]])]
         predictions = [np.array([[5, 4, 3, 2],
                                  [5, 4, 3, 2]]),
                        np.array([[5, 4, 3, 2]]),
@@ -121,9 +122,10 @@ class TestInformationRetrievalMetrics(unittest.TestCase):
                        np.array([[2, 3, 5, 4]]),
                        np.array([[2, 3, 5, 4]]),
                        np.array([[2, 3, 5, 4]]),
-                       np.array([[2, 3, 5]])]
-        rank = [4, 4, 4, 4, 4, 4, 3, 3, 5, 2, 4, 4]
-        expectations = [0.77777, 0.80555, 0.75, 0.0, 0.91666, 1.0, 1.0, 0.66666, 0.91666, 1.0, 0.0, 0.83333]
+                       np.array([[2, 3, 5]]),
+                       np.array([[2, 3, 5, 4, 2, 3, 5, 4, 2, 3, 5, 4, 2, 3, 5, 7, 3, 4]])]
+        rank = [4, 4, 4, 4, 4, 4, 3, 3, 5, 2, 4, 4, 8]
+        expectations = [0.77777, 0.80555, 0.75, 0.0, 0.91666, 1.0, 1.0, 0.66666, 0.91666, 1.0, 0.0, 0.83333, 0.61339]
 
         assert len(targets) == len(predictions) == len(rank) == len(expectations)
 
