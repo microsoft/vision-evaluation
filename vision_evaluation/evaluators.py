@@ -1157,3 +1157,47 @@ class MeanLpErrorEvaluator(Evaluator):
 
     def get_report(self, **kwargs):
         return {f'{self._get_id()}': (float(self.total_error)**(1 / self.p) / self.total_num) if self.total_num else 0.0}
+
+
+class ConfusionMatrixEvaluator(Evaluator):
+    """
+    Confusion matrix evaluator
+    """
+
+    def __init__(self, labels):
+        """
+        Initialize the evaluator.
+        """
+        super(ConfusionMatrixEvaluator, self).__init__()
+        self.labels = labels
+
+    def reset(self):
+        super(ConfusionMatrixEvaluator, self).reset()
+        self.confusion_matrix = None
+
+    def _get_id(self):
+        return f'confusion_matrix'
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate a batch of predictions.
+        Args:
+            predictions: the model output numpy array. Shape (N,)
+            targets: the ground truth labels. Shape (N,)
+        """
+        assert predictions.shape == targets.shape
+        assert len(targets.shape) == 1
+
+        confusion_matrix = sm.confusion_matrix(targets, predictions, labels=self.labels)
+        self.confusion_matrix = confusion_matrix if self.confusion_matrix is None else self.confusion_matrix + confusion_matrix
+
+    def get_report(self, **kwargs):
+        normalize = kwargs.get('normalize', False)
+        eps = 1e-5
+        out = dict()
+        if normalize:
+            cm = self.confusion_matrix.astype('float') / (self.confusion_matrix.sum(axis=1)[:, np.newaxis] + eps)
+        else:
+            cm = self.confusion_matrix.astype('float')
+        out["cm"] = cm
+        out["labels"] = self.labels
+        return {self._get_id(): out}

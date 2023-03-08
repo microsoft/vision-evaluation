@@ -8,7 +8,7 @@ from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvalu
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, \
     MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, \
     ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, MeanIOUEvaluator, ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, \
-    L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator
+    L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator, ConfusionMatrixEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -839,3 +839,22 @@ class TestMeanLpErrorEvaluator(unittest.TestCase):
         evaluator_l2.add_predictions(predictions=self.PREDICTIONS[5:], targets=self.TARGETS[5:])
         report = evaluator_l2.get_report()
         self.assertAlmostEqual(report[evaluator_l2._get_id()], np.sqrt(10) / 10, places=4)
+
+
+class TestConfusionMatrixEvaluator(unittest.TestCase):
+    TARGETS = np.array(["l1", "l2", "l3", "l4", "l5", "l3", "l3", "l2", "l1", "l0"])
+    PREDICTIONS = np.array(["l0", "l1", "l2", "l3", "l4", "l5", "l3", "l3", "l3", "l1"])
+    LABELS = ["l0", "l1", "l2", "l3", "l4", "l5"]
+    CM_GT = np.array([[0, 1., 0., 0., 0., 0.],
+                      [0.5, 0., 0., 0.5, 0., 0.],
+                      [0., 0.5, 0., 0.5, 0., 0.],
+                      [0., 0.0, 0.33333, 0.33333, 0., 0.33333],
+                      [0., 0., 0., 1., 0., 0.],
+                      [0., 0., 0., 0., 1., 0.]])
+
+    def test_confusion_matrix_evaluator(self):
+        evaluator_conf_mat = ConfusionMatrixEvaluator(self.LABELS)
+        evaluator_conf_mat.add_predictions(self.PREDICTIONS, self.TARGETS)
+        report = evaluator_conf_mat.get_report(normalize=True)
+        self.assertAlmostEqual(np.abs((self.CM_GT - report['confusion_matrix']["cm"])).sum(), 0, places=4)
+        evaluator_conf_mat.add_predictions(self.PREDICTIONS, self.TARGETS)
