@@ -1168,12 +1168,12 @@ class ConfusionMatrixEvaluator(Evaluator):
         """
         Initialize the evaluator.
         """
-        super(ConfusionMatrixEvaluator, self).__init__()
         self.labels = labels
+        super(ConfusionMatrixEvaluator, self).__init__()
 
     def reset(self):
         super(ConfusionMatrixEvaluator, self).reset()
-        self.confusion_matrix = None
+        self.confusion_matrix = np.zeros([len(self.labels), len(self.labels)], dtype=np.int64)
 
     def _get_id(self):
         return f'confusion_matrix'
@@ -1186,9 +1186,10 @@ class ConfusionMatrixEvaluator(Evaluator):
         """
         assert predictions.shape == targets.shape
         assert len(targets.shape) == 1
+        assert set(predictions).issubset(set(self.labels))
+        assert set(targets).issubset(set(self.labels))
 
-        confusion_matrix = sm.confusion_matrix(targets, predictions, labels=self.labels)
-        self.confusion_matrix = confusion_matrix if self.confusion_matrix is None else self.confusion_matrix + confusion_matrix
+        self.confusion_matrix += sm.confusion_matrix(targets, predictions, labels=self.labels)
 
     def get_report(self, **kwargs):
         normalize = kwargs.get('normalize', False)
