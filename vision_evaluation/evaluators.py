@@ -1169,10 +1169,10 @@ class ConfusionMatrixEvaluator(Evaluator):
         self.all_predictions = np.array([])
 
     def _get_id(self):
-        return f'confusion_matrix'
+        return 'confusion_matrix'
 
     def add_predictions(self, predictions, targets):
-        """ Evaluate a batch of predictions.
+        """ Evaluate a batch of predictions and targets.
         Args:
             predictions: the model output numpy array. Shape (N,)
             targets: the ground truth labels. Shape (N,)
@@ -1188,6 +1188,11 @@ class ConfusionMatrixEvaluator(Evaluator):
         Args:
             labels: List of labels to index the matrix. Array-like of shape (n_classes)
             normalize: Boolean flag. If True, it normalizes the returned confusion matrix is normalized by the sum of the rows.
+        Returns:
+            returns a dict containing 2 entries:
+            1) "cm" is the confusion matrix that is a 2d numpy array of shape (L, L) where L is the number of labels
+            2) "labels" is the list of labels that index the matrix
+            {"cm": confusion_matrix, "labels": labels}
         """
         assert "labels" in kwargs
         labels = kwargs["labels"]

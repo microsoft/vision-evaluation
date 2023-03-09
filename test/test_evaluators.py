@@ -880,4 +880,5 @@ class TestConfusionMatrixEvaluator(unittest.TestCase):
             evaluator_conf_mat.reset()
         with self.assertRaises(AssertionError):
             evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[idx])
+        with self.assertRaises(AssertionError):
             evaluator_conf_mat.add_predictions(self.PREDICTIONS[0], self.TARGETS[2])
