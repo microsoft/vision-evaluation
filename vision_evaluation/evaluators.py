@@ -1184,8 +1184,15 @@ class ConfusionMatrixEvaluator(Evaluator):
         self.all_targets = np.append(self.all_targets, targets, axis=0)
 
     def get_report(self, **kwargs):
+        """Get the calculated value of the metric
+        Arrgs:
+            labels: List of labels to index the matrix. Array-like of shape (n_classes)
+        """
         assert "labels" in kwargs
         labels = kwargs["labels"]
+        assert len(labels) > 0
+        assert set(self.all_predictions).issubset(set(labels))
+        assert set(self.all_targets).issubset(set(labels))
         normalize = kwargs.get('normalize', False)
         eps = 1e-5
         out = dict()

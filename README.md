@@ -26,7 +26,7 @@ This repo currently offers evaluation metrics for three vision tasks:
   - `RocAucEvaluator`: computes Area under the Receiver Operating Characteristic Curve.
   - `F1ScoreEvaluator`: computes f1-score (recall and precision will be reported as well).
   - `EceLossEvaluator`: computes the [ECE loss](https://arxiv.org/pdf/1706.04599.pdf), i.e., the expected calibration error, given the model confidence and true labels for a set of data points.
-  - `ConfusionMatrixEvaluator' computes the confusion matrix of a classification. By definition a confusion matrix C is such that Cij is equal to the number of observations known to be in group i and predicted to be in group j.
+  - `ConfusionMatrixEvaluator` computes the confusion matrix of a classification. By definition a confusion matrix C is such that Cij is equal to the number of observations known to be in group i and predicted to be in group j (https://en.wikipedia.org/wiki/Confusion_matrix).
 .
 - **Object detection**:
   - `CocoMeanAveragePrecisionEvaluator`: Coco mean average precision (mAP) computation across different classes, under multiple [IoU(s)](https://en.wikipedia.org/wiki/Jaccard_index).

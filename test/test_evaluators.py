@@ -842,20 +842,37 @@ class TestMeanLpErrorEvaluator(unittest.TestCase):
 
 
 class TestConfusionMatrixEvaluator(unittest.TestCase):
-    TARGETS = np.array(["l1", "l2", "l3", "l4", "l5", "l3", "l3", "l2", "l1", "l0"])
-    PREDICTIONS = np.array(["l0", "l1", "l2", "l3", "l4", "l5", "l3", "l3", "l3", "l1"])
-    LABELS = ["l0", "l1", "l2", "l3", "l4", "l5"]
-    CM_GT = np.array([[0, 1., 0., 0., 0., 0.],
+    TARGETS = [np.array(["l1", "l2", "l3", "l4", "l5", "l3", "l3", "l2", "l1", "l0"]),
+               np.array(["l1", "l1", "l1", "l4", "l3", "l3", "l3", "l2", "l1", "l1"]),
+               np.array([0])]
+    PREDICTIONS = [np.array(["l0", "l1", "l2", "l3", "l4", "l5", "l3", "l3", "l3", "l1"]),
+                   np.array(["l0", "l1", "l2", "l3", "l4", "l2", "l3", "l3", "l3", "l1"]),
+                   np.array([1])]
+    CM_GT = [np.array([[0, 1., 0., 0., 0., 0.],
                       [0.5, 0., 0., 0.5, 0., 0.],
                       [0., 0.5, 0., 0.5, 0., 0.],
                       [0., 0.0, 0.33333, 0.33333, 0., 0.33333],
                       [0., 0., 0., 1., 0., 0.],
-                      [0., 0., 0., 0., 1., 0.]])
+                      [0., 0., 0., 0., 1., 0.]]),
+             np.array([[0, 0, 0, 0, 0],
+                       [1, 2, 1, 1, 0],
+                       [0, 0, 0, 1, 0],
+                       [0, 0, 1, 1, 1],
+                       [0, 0, 0, 1, 0]]),
+             np.array([[0, 1],
+                       [0, 0]])]
+
+    LABELS = [["l0", "l1", "l2", "l3", "l4", "l5"],
+              ["l0", "l1", "l2", "l3", "l4"],
+              [0, 1]]
+
+    NORMALIZATIONS = [True, False, False]
 
     def test_confusion_matrix_evaluator(self):
         evaluator_conf_mat = ConfusionMatrixEvaluator()
-        evaluator_conf_mat.add_predictions(self.PREDICTIONS, self.TARGETS)
-        report = evaluator_conf_mat.get_report(labels=self.LABELS, normalize=True)
-        self.assertAlmostEqual(np.abs((self.CM_GT - report['confusion_matrix']["cm"])).sum(), 0, places=4)
-        self.assertEqual(report['confusion_matrix']["labels"], self.LABELS)
-        evaluator_conf_mat.add_predictions(self.PREDICTIONS, self.TARGETS)
+        for idx in range(len(self.TARGETS)):
+            evaluator_conf_mat.add_predictions(self.PREDICTIONS[idx], self.TARGETS[idx])
+            report = evaluator_conf_mat.get_report(labels=self.LABELS[idx], normalize=self.NORMALIZATIONS[idx])
+            self.assertAlmostEqual(np.abs((self.CM_GT[idx] - report['confusion_matrix']["cm"])).sum(), 0, places=4)
+            self.assertEqual(report['confusion_matrix']["labels"], self.LABELS[idx])
+            evaluator_conf_mat.reset()
