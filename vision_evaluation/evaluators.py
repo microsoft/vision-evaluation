@@ -1187,6 +1187,7 @@ class ConfusionMatrixEvaluator(Evaluator):
         """Get the calculated value of the metric
         Arrgs:
             labels: List of labels to index the matrix. Array-like of shape (n_classes)
+            normalize: Boolean flag. If True, it normalizes the returned confusion matrix is normalized by the sum of the rows.
         """
         assert "labels" in kwargs
         labels = kwargs["labels"]
