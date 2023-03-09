@@ -889,6 +889,11 @@ class TestConfusionMatrixEvaluator(unittest.TestCase):
             report = evaluator_conf_mat.get_report(labels=self.LABELS[idx], normalize=self.NORMALIZATIONS[idx])
             self.assertAlmostEqual(np.abs((self.CM_GT[idx] - report['confusion_matrix']["cm"])).sum(), 0, places=4)
             self.assertEqual(report['confusion_matrix']["labels"], self.LABELS[idx])
+            evaluator_conf_mat.reset()
+            evaluator_conf_mat.add_predictions(self.PREDICTIONS[idx], self.TARGETS[idx])
+            report2 = evaluator_conf_mat.get_report(labels=self.LABELS[idx], normalize=self.NORMALIZATIONS[idx])
+            self.assertAlmostEqual(np.abs((self.CM_GT[idx] - report['confusion_matrix']["cm"])).sum(), np.abs((self.CM_GT[idx] - report2['confusion_matrix']["cm"])).sum(), places=5)
+            self.assertEqual(report['confusion_matrix']["labels"], report2['confusion_matrix']["labels"])
             with self.assertRaises(AssertionError):
                 evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[idx])
             with self.assertRaises(AssertionError):
