@@ -844,9 +844,13 @@ class TestMeanLpErrorEvaluator(unittest.TestCase):
 class TestConfusionMatrixEvaluator(unittest.TestCase):
     TARGETS = [np.array(["l1", "l2", "l3", "l4", "l5", "l3", "l3", "l2", "l1", "l0"]),
                np.array(["l1", "l1", "l1", "l4", "l3", "l3", "l3", "l2", "l1", "l1"]),
+               np.array([0]),
+               np.array([0]),
                np.array([0])]
     PREDICTIONS = [np.array(["l0", "l1", "l2", "l3", "l4", "l5", "l3", "l3", "l3", "l1"]),
                    np.array(["l0", "l1", "l2", "l3", "l4", "l2", "l3", "l3", "l3", "l1"]),
+                   np.array([1]),
+                   np.array([0]),
                    np.array([1])]
     CM_GT = [np.array([[0, 1., 0., 0., 0., 0.],
                       [0.5, 0., 0., 0.5, 0., 0.],
@@ -860,16 +864,26 @@ class TestConfusionMatrixEvaluator(unittest.TestCase):
                        [0, 0, 1, 1, 1],
                        [0, 0, 0, 1, 0]]),
              np.array([[0, 1],
-                       [0, 0]])]
+                       [0, 0]]),
+             np.array([[1]]),
+             np.array([[0, 1, 0],
+                       [0, 0, 0],
+                       [0, 0, 0]])]
 
     LABELS = [["l0", "l1", "l2", "l3", "l4", "l5"],
               ["l0", "l1", "l2", "l3", "l4"],
-              [0, 1]]
+              [0, 1],
+              [0],
+              [0, 1, 2]]
 
-    NORMALIZATIONS = [True, False, False]
+    NORMALIZATIONS = [True, False, False, False, False]
 
     def test_confusion_matrix_evaluator(self):
         evaluator_conf_mat = ConfusionMatrixEvaluator()
+        with self.assertRaises(AssertionError):
+            evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[0])
+        with self.assertRaises(AssertionError):
+            evaluator_conf_mat.get_report(labels=[0], normalize=self.NORMALIZATIONS[0])
         for idx in range(len(self.TARGETS)):
             evaluator_conf_mat.add_predictions(self.PREDICTIONS[idx], self.TARGETS[idx])
             report = evaluator_conf_mat.get_report(labels=self.LABELS[idx], normalize=self.NORMALIZATIONS[idx])
@@ -877,6 +891,8 @@ class TestConfusionMatrixEvaluator(unittest.TestCase):
             self.assertEqual(report['confusion_matrix']["labels"], self.LABELS[idx])
             with self.assertRaises(AssertionError):
                 evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[idx])
+            with self.assertRaises(AssertionError):
+                evaluator_conf_mat.get_report(labels=["abc"], normalize=self.NORMALIZATIONS[idx])
             evaluator_conf_mat.reset()
         with self.assertRaises(AssertionError):
             evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[idx])
