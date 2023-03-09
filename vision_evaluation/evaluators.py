@@ -1163,17 +1163,10 @@ class ConfusionMatrixEvaluator(Evaluator):
     """
     Confusion matrix evaluator
     """
-
-    def __init__(self, labels):
-        """
-        Initialize the evaluator.
-        """
-        self.labels = labels
-        super(ConfusionMatrixEvaluator, self).__init__()
-
     def reset(self):
         super(ConfusionMatrixEvaluator, self).reset()
-        self.confusion_matrix = np.zeros([len(self.labels), len(self.labels)], dtype=np.int64)
+        self.all_targets = np.array([])
+        self.all_predictions = np.array([])
 
     def _get_id(self):
         return f'confusion_matrix'
@@ -1186,19 +1179,19 @@ class ConfusionMatrixEvaluator(Evaluator):
         """
         assert predictions.shape == targets.shape
         assert len(targets.shape) == 1
-        assert set(predictions).issubset(set(self.labels))
-        assert set(targets).issubset(set(self.labels))
 
-        self.confusion_matrix += sm.confusion_matrix(targets, predictions, labels=self.labels)
+        self.all_predictions = np.append(self.all_predictions, predictions, axis=0)
+        self.all_targets = np.append(self.all_targets, targets, axis=0)
 
     def get_report(self, **kwargs):
+        assert "labels" in kwargs
+        labels = kwargs["labels"]
         normalize = kwargs.get('normalize', False)
         eps = 1e-5
         out = dict()
+        confusion_matrix = sm.confusion_matrix(self.all_targets, self.all_predictions, labels=labels).astype('float')
         if normalize:
-            cm = self.confusion_matrix.astype('float') / (self.confusion_matrix.sum(axis=1)[:, np.newaxis] + eps)
-        else:
-            cm = self.confusion_matrix.astype('float')
-        out["cm"] = cm
-        out["labels"] = self.labels
+            confusion_matrix = confusion_matrix / (confusion_matrix.sum(axis=1)[:, np.newaxis] + eps)
+        out["cm"] = confusion_matrix
+        out["labels"] = labels
         return {self._get_id(): out}
