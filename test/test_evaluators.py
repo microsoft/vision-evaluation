@@ -8,7 +8,7 @@ from vision_evaluation.evaluators import AveragePrecisionEvaluator, F1ScoreEvalu
     PrecisionEvaluator, RecallEvaluator, TagWiseAccuracyEvaluator, TagWiseAveragePrecisionEvaluator, \
     MeanAveragePrecisionNPointsEvaluator, BalancedAccuracyScoreEvaluator, CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, \
     ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, RocAucEvaluator, MeanIOUEvaluator, ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, \
-    L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator
+    L1ErrorEvaluator, GroupWiseEvaluator, MeanLpErrorEvaluator, ConfusionMatrixEvaluator
 from vision_evaluation.prediction_filters import TopKPredictionFilter, ThresholdPredictionFilter
 
 
@@ -839,3 +839,67 @@ class TestMeanLpErrorEvaluator(unittest.TestCase):
         evaluator_l2.add_predictions(predictions=self.PREDICTIONS[5:], targets=self.TARGETS[5:])
         report = evaluator_l2.get_report()
         self.assertAlmostEqual(report[evaluator_l2._get_id()], np.sqrt(10) / 10, places=4)
+
+
+class TestConfusionMatrixEvaluator(unittest.TestCase):
+    TARGETS = [np.array(["l1", "l2", "l3", "l4", "l5", "l3", "l3", "l2", "l1", "l0"]),
+               np.array(["l1", "l1", "l1", "l4", "l3", "l3", "l3", "l2", "l1", "l1"]),
+               np.array([0]),
+               np.array([0]),
+               np.array([0])]
+    PREDICTIONS = [np.array(["l0", "l1", "l2", "l3", "l4", "l5", "l3", "l3", "l3", "l1"]),
+                   np.array(["l0", "l1", "l2", "l3", "l4", "l2", "l3", "l3", "l3", "l1"]),
+                   np.array([1]),
+                   np.array([0]),
+                   np.array([1])]
+    CM_GT = [np.array([[0, 1., 0., 0., 0., 0.],
+                      [0.5, 0., 0., 0.5, 0., 0.],
+                      [0., 0.5, 0., 0.5, 0., 0.],
+                      [0., 0.0, 0.33333, 0.33333, 0., 0.33333],
+                      [0., 0., 0., 1., 0., 0.],
+                      [0., 0., 0., 0., 1., 0.]]),
+             np.array([[0, 0, 0, 0, 0],
+                       [1, 2, 1, 1, 0],
+                       [0, 0, 0, 1, 0],
+                       [0, 0, 1, 1, 1],
+                       [0, 0, 0, 1, 0]]),
+             np.array([[0, 1],
+                       [0, 0]]),
+             np.array([[1]]),
+             np.array([[0, 1, 0],
+                       [0, 0, 0],
+                       [0, 0, 0]])]
+
+    LABELS = [["l0", "l1", "l2", "l3", "l4", "l5"],
+              ["l0", "l1", "l2", "l3", "l4"],
+              [0, 1],
+              [0],
+              [0, 1, 2]]
+
+    NORMALIZATIONS = [True, False, False, False, False]
+
+    def test_confusion_matrix_evaluator(self):
+        evaluator_conf_mat = ConfusionMatrixEvaluator()
+        with self.assertRaises(AssertionError):
+            evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[0])
+        with self.assertRaises(AssertionError):
+            evaluator_conf_mat.get_report(labels=[0], normalize=self.NORMALIZATIONS[0])
+        for idx in range(len(self.TARGETS)):
+            evaluator_conf_mat.add_predictions(self.PREDICTIONS[idx], self.TARGETS[idx])
+            report = evaluator_conf_mat.get_report(labels=self.LABELS[idx], normalize=self.NORMALIZATIONS[idx])
+            self.assertAlmostEqual(np.abs((self.CM_GT[idx] - report['confusion_matrix']["cm"])).sum(), 0, places=4)
+            self.assertEqual(report['confusion_matrix']["labels"], self.LABELS[idx])
+            evaluator_conf_mat.reset()
+            evaluator_conf_mat.add_predictions(self.PREDICTIONS[idx], self.TARGETS[idx])
+            report2 = evaluator_conf_mat.get_report(labels=self.LABELS[idx], normalize=self.NORMALIZATIONS[idx])
+            self.assertAlmostEqual(np.abs((self.CM_GT[idx] - report['confusion_matrix']["cm"])).sum(), np.abs((self.CM_GT[idx] - report2['confusion_matrix']["cm"])).sum(), places=5)
+            self.assertEqual(report['confusion_matrix']["labels"], report2['confusion_matrix']["labels"])
+            with self.assertRaises(AssertionError):
+                evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[idx])
+            with self.assertRaises(AssertionError):
+                evaluator_conf_mat.get_report(labels=["abc"], normalize=self.NORMALIZATIONS[idx])
+            evaluator_conf_mat.reset()
+        with self.assertRaises(AssertionError):
+            evaluator_conf_mat.get_report(labels=[], normalize=self.NORMALIZATIONS[idx])
+        with self.assertRaises(AssertionError):
+            evaluator_conf_mat.add_predictions(self.PREDICTIONS[0], self.TARGETS[2])

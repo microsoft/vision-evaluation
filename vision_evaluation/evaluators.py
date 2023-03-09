@@ -1157,3 +1157,56 @@ class MeanLpErrorEvaluator(Evaluator):
 
     def get_report(self, **kwargs):
         return {f'{self._get_id()}': (float(self.total_error)**(1 / self.p) / self.total_num) if self.total_num else 0.0}
+
+
+class ConfusionMatrixEvaluator(Evaluator):
+    """
+    Confusion matrix evaluator
+    """
+    def reset(self):
+        super(ConfusionMatrixEvaluator, self).reset()
+        self.all_targets = np.array([])
+        self.all_predictions = np.array([])
+
+    def _get_id(self):
+        return 'confusion_matrix'
+
+    def add_predictions(self, predictions, targets):
+        """ Evaluate a batch of predictions and targets.
+        Args:
+            predictions: the model output numpy array. Shape (N,)
+            targets: the ground truth labels. Shape (N,)
+        """
+        assert predictions.shape == targets.shape
+        assert len(targets.shape) == 1
+
+        self.all_predictions = np.append(self.all_predictions, predictions, axis=0)
+        self.all_targets = np.append(self.all_targets, targets, axis=0)
+
+    def get_report(self, **kwargs):
+        """Get the calculated value of the metric
+        Args:
+            labels: List of labels to index the matrix. Array-like of shape (n_classes)
+            normalize: Boolean flag. If True, it normalizes the returned confusion matrix is normalized by the sum of the rows.
+        Returns:
+            returns a dict with one entry "confusion_matrix". "confusion_matrix" is itself a dict that contains 2 entries:
+            1) "cm" is the confusion matrix that is a 2d numpy array of shape (L, L) where L is the number of labels
+            2) "labels" is the list of labels that index the matrix
+            {"cm": confusion_matrix, "labels": labels}
+        """
+        assert "labels" in kwargs
+        labels = kwargs["labels"]
+        assert len(labels) > 0
+        assert self.all_predictions.size > 0
+        assert self.all_targets.size > 0
+        assert set(self.all_predictions).issubset(set(labels))
+        assert set(self.all_targets).issubset(set(labels))
+        normalize = kwargs.get('normalize', False)
+        eps = 1e-5
+        out = dict()
+        confusion_matrix = sm.confusion_matrix(self.all_targets, self.all_predictions, labels=labels).astype('float')
+        if normalize:
+            confusion_matrix = confusion_matrix / (confusion_matrix.sum(axis=1)[:, np.newaxis] + eps)
+        out["cm"] = confusion_matrix
+        out["labels"] = labels
+        return {self._get_id(): out}

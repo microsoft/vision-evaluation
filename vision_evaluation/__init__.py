@@ -3,7 +3,7 @@ from .evaluators import MeanAveragePrecisionEvaluatorForMultipleIOUs, MeanAverag
     TagWiseAveragePrecisionEvaluator, TagWiseAccuracyEvaluator, MeanAveragePrecisionNPointsEvaluator, \
     BalancedAccuracyScoreEvaluator, CocoMeanAveragePrecisionEvaluator, BleuScoreEvaluator, METEORScoreEvaluator, \
     ROUGELScoreEvaluator, CIDErScoreEvaluator, SPICEScoreEvaluator, MeanIOUEvaluator, ForegroundIOUEvaluator, BoundaryMeanIOUEvaluator, BoundaryForegroundIOUEvaluator, L1ErrorEvaluator, \
-    GroupWiseEvaluator
+    GroupWiseEvaluator, ConfusionMatrixEvaluator
 
 from .retrieval_evaluators import MeanAveragePrecisionAtK, PrecisionAtKEvaluator, PrecisionRecallCurveNPointsEvaluator, RecallAtKEvaluator
 
@@ -13,4 +13,4 @@ __all__ = ['MeanAveragePrecisionEvaluatorForMultipleIOUs', 'MeanAveragePrecision
            'TagWiseAveragePrecisionEvaluator', 'MeanAveragePrecisionNPointsEvaluator',
            'PrecisionRecallCurveNPointsEvaluator', 'BalancedAccuracyScoreEvaluator', 'CocoMeanAveragePrecisionEvaluator', 'BleuScoreEvaluator',
            'METEORScoreEvaluator', 'ROUGELScoreEvaluator', 'CIDErScoreEvaluator', 'SPICEScoreEvaluator', 'MeanIOUEvaluator', 'ForegroundIOUEvaluator', 'BoundaryForegroundIOUEvaluator',
-           'BoundaryMeanIOUEvaluator', 'L1ErrorEvaluator', 'GroupWiseEvaluator']
+           'BoundaryMeanIOUEvaluator', 'L1ErrorEvaluator', 'GroupWiseEvaluator', 'ConfusionMatrixEvaluator']
