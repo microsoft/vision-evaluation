@@ -1185,7 +1185,7 @@ class ConfusionMatrixEvaluator(Evaluator):
 
     def get_report(self, **kwargs):
         """Get the calculated value of the metric
-        Arrgs:
+        Args:
             labels: List of labels to index the matrix. Array-like of shape (n_classes)
             normalize: Boolean flag. If True, it normalizes the returned confusion matrix is normalized by the sum of the rows.
         """
