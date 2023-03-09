@@ -60,4 +60,4 @@ While different machine learning problems/applications prefer different metrics,
 
 ## Additional Requirements
 
-The image caption evaluators requires Jave Runtime Environment (JRE) (Java 1.8.0). This is not required for other evaluators.
+The image caption evaluators requires Jave Runtime Environment (JRE) (Java 1.8.0) and some extra dependencies which can be installed with `pip install vision-evaluation[caption]`. This is not required for other evaluators.

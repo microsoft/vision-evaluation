@@ -33,7 +33,9 @@ setuptools.setup(name='vision-evaluation',
                      'numpy',
                      'scikit-learn>=1.0',
                      'pycocotools',
-                     'pycocoevalcap',
                      'opencv-python-headless',
                      'Pillow>=6.2.2'
-                 ])
+                 ],
+                 extras_require={
+                     'caption': ['pycocoevalcap']
+                 })
