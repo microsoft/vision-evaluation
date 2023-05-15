@@ -1,10 +1,5 @@
-import unittest
-import torch
-from visionmetrics import DoNothingMetric
+# Import metrics directly from torchmetrics
+from torchmetrics.classification import Accuracy
 
-
-class TestDoNothingMetric(unittest.TestCase):
-    def test_simple(self):
-        metric = DoNothingMetric()
-        metric.update(torch.tensor(1.0), torch.tensor(1.0))
-        self.assertEqual(metric.compute(), "DoNothingMetric")
+# Import custom metrics from visionmetrics
+from visionmetrics.classification import DoNothingMetric
