@@ -6,7 +6,7 @@ from typing import Any
 from torchmetrics import Metric
 from vision_evaluation.prediction_filters import TopKPredictionFilter
 
-
+# NOTE: This is an example of extending torchmetrics.Metric
 class TopKAccuracy(Metric):
     def __init__(self, k: int) -> None:
         super().__init__()
