@@ -5,3 +5,4 @@ pycocoevalcap
 install-jdk
 opencv-python-headless
 Pillow>=6.2.2
+torchmetrics
