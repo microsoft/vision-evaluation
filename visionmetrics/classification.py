@@ -4,9 +4,9 @@ import typing
 from typing import Any
 
 from torchmetrics import Metric
-from vision_evaluation.prediction_filters import TopKPredictionFilter
+from visionmetrics.prediction_filters import TopKPredictionFilter
 
-# NOTE: This is an example of extending torchmetrics.Metric
+# NOTE: This is an example of extending torchmetrics.Metric. TopKAccuracy is already implemented in torchmetrics.
 class TopKAccuracy(Metric):
     def __init__(self, k: int) -> None:
         super().__init__()
@@ -29,3 +29,5 @@ class TopKAccuracy(Metric):
 
     def compute(self) -> Any:
         return {f'accuracy_{self.prediction_filter.identifier}': float(self.topk_correct_num) / self.total_num if self.total_num else 0.0}
+
+
